@@ -367,6 +367,22 @@
         .score-display .correct-count { color: #0f9b8e; font-weight: bold; }
         .score-display .total-count   { color: #c0c8e0; }
         .score-display .pct           { color: #6c6c80; margin-left: 8px; }
+
+        .attribution {
+            margin-top: 30px;
+            color: #6c6c80;
+            font-size: 0.78em;
+            text-align: center;
+            letter-spacing: 0.5px;
+            line-height: 1.5;
+            max-width: 520px;
+        }
+        .attribution a {
+            color: #8a8aa8;
+            text-decoration: none;
+            border-bottom: 1px dotted #4a4a6a;
+        }
+        .attribution a:hover { color: #e94560; border-bottom-color: #e94560; }
     </style>
 </head>
 <body>
@@ -431,6 +447,12 @@
         <span class="counter study-only" id="counter">1 / 100</span>
         <button class="nav-btn" id="nextBtn" onclick="nextCard()">Next ▶</button>
     </div>
+
+    <p class="attribution">
+        Audio from <a href="https://tone.lib.msu.edu/" target="_blank" rel="noopener">Tone Perfect</a>:
+        Catherine Ryu, Mandarin Tone Perception &amp; Production Team, and Michigan State University Libraries.
+        <em>Tone Perfect: Multimodal Database for Mandarin Chinese.</em>
+    </p>
 
     <script>
         // ============================================
