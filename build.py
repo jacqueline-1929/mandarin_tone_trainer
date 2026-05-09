@@ -2,15 +2,18 @@
 """
 Build script for Mandarin tone-contrast flashcards.
 
-Resolves each (syllable, tone, speaker) -> Tone Perfect item ID, downloads the
-MP3 to audio/, and rewrites the flashcardData block in index.html.
+For each (syllable, tone, speaker) in PAIRS: resolves to a Tone Perfect item ID
+and downloads the MP3 to audio/.
+
+For each phrase in PHRASES: downloads the Tatoeba audio to audio/phrases/.
+
+Then rewrites the flashcardData and phraseData blocks in index.html.
 
 Idempotent: skips downloads for files that already exist.
 
 Usage: python3 build.py
 """
 import json
-import os
 import re
 import sys
 import time
@@ -22,8 +25,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 AUDIO_DIR = ROOT / "audio"
+PHRASE_AUDIO_DIR = AUDIO_DIR / "phrases"
 INDEX_HTML = ROOT / "index.html"
 TONE_PERFECT_BASE = "https://tone.lib.msu.edu"
+TATOEBA_AUDIO_BASE = "https://tatoeba.org/en/audio/download"
 SPEAKERS = ("FV1", "MV1")
 HEADERS = {"User-Agent": "Mozilla/5.0 (mandapanda flashcard builder)"}
 
@@ -201,24 +206,315 @@ def build_flashcard_data() -> list[dict]:
     return cards
 
 
-DATA_BLOCK_RE = re.compile(
-    r"const flashcardData = \[.*?\];\s*\n",
-    re.DOTALL,
+# =============================================================================
+# Phrases — sourced from Tatoeba (CC BY 2.0 FR). Each entry has:
+#   tatoeba_audio_id : ID for the audio download URL
+#   text             : Mandarin sentence (Simplified)
+#   pinyin           : citation-form pinyin (no sandhi marking)
+#   meaning          : English gloss
+# =============================================================================
+PHRASES = [
+    (25746,   "你在听我说吗？",                  "Nǐ zài tīng wǒ shuō ma?",                       "Are you listening to me?"),
+    (26040,   "今天天气很好。",                  "Jīntiān tiānqì hěn hǎo.",                       "The weather is nice today."),
+    (1280206, "我今天想早睡。",                  "Wǒ jīntiān xiǎng zǎo shuì.",                    "I want to sleep early today."),
+    (1279628, "我每天都吃水果。",                "Wǒ měitiān dōu chī shuǐguǒ.",                   "I eat fruit every day."),
+    (1277915, "要不要一起去？",                  "Yào bú yào yīqǐ qù?",                           "Want to go together?"),
+    (25745,   "我想看看。",                      "Wǒ xiǎng kàn kan.",                             "I want to take a look."),
+    (25537,   "我什么都不想喝。",                "Wǒ shénme dōu bù xiǎng hē.",                    "I don't want to drink anything."),
+    (25858,   "我不想等那么久。",                "Wǒ bù xiǎng děng nàme jiǔ.",                    "I don't want to wait that long."),
+    (25900,   "我能问一些问题吗？",              "Wǒ néng wèn yīxiē wèntí ma?",                   "Can I ask some questions?"),
+    (26450,   "我已经吃饱了，谢谢。",            "Wǒ yǐjīng chī bǎo le, xièxie.",                 "I'm already full, thank you."),
+    (26986,   "我今天感觉好多了。",              "Wǒ jīntiān gǎnjué hǎoduō le.",                  "I feel much better today."),
+    (26557,   "他和我一样高。",                  "Tā hé wǒ yīyàng gāo.",                          "He's as tall as me."),
+    (26798,   "我买不起那个。",                  "Wǒ mǎi bù qǐ nàge.",                            "I can't afford that."),
+    (27398,   "我去不了，也不想去。",            "Wǒ qù bù liǎo, yě bù xiǎng qù.",                "I can't go, and I don't want to."),
+    (25499,   "你想走的时候就走吧。",            "Nǐ xiǎng zǒu de shíhou jiù zǒu ba.",            "Leave whenever you want."),
+    (26702,   "我想看这部电影。",                "Wǒ xiǎng kàn zhè bù diànyǐng.",                 "I want to watch this movie."),
+    (26300,   "我们早点走不是更好吗？",          "Wǒmen zǎo diǎn zǒu bú shì gèng hǎo ma?",        "Wouldn't it be better to leave earlier?"),
+    (25775,   "你更喜欢哪个，这个还是那个？",    "Nǐ gèng xǐhuan nǎge, zhège háishì nàge?",       "Which do you prefer, this one or that one?"),
+    (1280930, "他不是我的男朋友，他是我的哥哥。", "Tā bú shì wǒ de nán péngyou, tā shì wǒ de gēge.","He's not my boyfriend, he's my older brother."),
+    (27402,   "一个是新的，另一个是旧的。",      "Yīge shì xīn de, lìng yīge shì jiù de.",        "One is new, the other is old."),
+    (25445,   "等她回来的时候问问她。",          "Děng tā huílái de shíhou wèn wen tā.",          "Ask her when she comes back."),
+    (26095,   "他半夜打了个电话给我。",          "Tā bànyè dǎ le ge diànhuà gěi wǒ.",             "He called me in the middle of the night."),
+    (26612,   "你回来之前我已经走了。",          "Nǐ huílái zhīqián wǒ yǐjīng zǒu le.",           "I'd already left before you came back."),
+    (25816,   "他很快就会回来的。",              "Tā hěn kuài jiù huì huílái de.",                "He'll be back soon."),
+    (1281126, "我们明天早上九点见好吗？",        "Wǒmen míngtiān zǎoshang jiǔ diǎn jiàn hǎo ma?", "Shall we meet at 9 tomorrow morning?"),
+    (992955,  "我今天不想起床。",                "Wǒ jīntiān bù xiǎng qǐchuáng.",                 "I don't want to get up today."),
+    (1281062, "我只想和你在一起。",              "Wǒ zhǐ xiǎng hé nǐ zài yīqǐ.",                  "I just want to be with you."),
+    (1281091, "你昨天上午在打网球吗？",          "Nǐ zuótiān shàngwǔ zài dǎ wǎngqiú ma?",         "Were you playing tennis yesterday morning?"),
+    (27535,   "我在想你今天会不会来。",          "Wǒ zài xiǎng nǐ jīntiān huì bú huì lái.",       "I was wondering if you'd come today."),
+    (1278056, "今天要不要去我家看看？",          "Jīntiān yào bú yào qù wǒ jiā kàn kan?",         "Want to come see my house today?"),
+    (26785,   "我等我的一个朋友等了一小时。",    "Wǒ děng wǒ de yī ge péngyou děng le yī xiǎoshí.","I waited for a friend for an hour."),
+    (25519,   "你走了，我们都会想你的。",        "Nǐ zǒu le, wǒmen dōu huì xiǎng nǐ de.",         "When you leave, we'll all miss you."),
+    (26068,   "如果我是你，我也会这么做。",      "Rúguǒ wǒ shì nǐ, wǒ yě huì zhème zuò.",         "If I were you, I'd do the same."),
+    (25931,   "我们在下个加油站停一下。",        "Wǒmen zài xià ge jiāyóuzhàn tíng yīxià.",       "Let's stop at the next gas station."),
+    (25416,   "雨不停，我们不会出去。",          "Yǔ bù tíng, wǒmen bú huì chū qù.",              "The rain won't stop, so we won't go out."),
+    (26911,   "这看上去像个蛋。",                "Zhè kàn shàngqù xiàng ge dàn.",                 "This looks like an egg."),
+    (25839,   "你现在好点了吗？",                "Nǐ xiànzài hǎo diǎn le ma?",                    "Are you feeling better now?"),
+    (26936,   "不要把门开着。",                  "Bú yào bǎ mén kāi zhe.",                        "Don't leave the door open."),
+    (26082,   "你是我的一切。",                  "Nǐ shì wǒ de yīqiè.",                           "You are my everything."),
+    (26348,   "这是你的信。",                    "Zhè shì nǐ de xìn.",                            "This is your letter."),
+]
+
+
+def download_phrase(audio_id: int, dest: Path) -> None:
+    if dest.exists() and dest.stat().st_size > 1000:
+        return
+    data = http_get(f"{TATOEBA_AUDIO_BASE}/{audio_id}")
+    if len(data) < 1000:
+        raise RuntimeError(f"suspiciously small mp3 ({len(data)}B) for audio_id {audio_id}")
+    dest.write_bytes(data)
+
+
+# Spotify playlist ID for the Songs tab. Just the ID, not the full URL.
+# To swap: paste a new playlist URL, take the bit between /playlist/ and the ?
+SPOTIFY_PLAYLIST_ID = "6TZP72K8V8hrcSMWbz7LGw"
+
+
+# =============================================================================
+# Stories — chengyu (Chinese idiom origin tales). Each is broken into sentences
+# so the UI can show character/pinyin/English aligned per sentence. The audio
+# is a YouTube embed (privacy-enhanced via youtube-nocookie.com).
+# =============================================================================
+STORIES = [
+    {
+        "id": 1,
+        "title_han":    "守株待兔",
+        "title_pinyin": "Shǒu zhū dài tù",
+        "title_en":     "Waiting by the Stump",
+        "youtube_id":   "FVUgXgIEnSo",
+        "youtube_label":"LingoAce · animated story",
+        "body": [
+            {"han": "宋国有一个农夫，每天在田里耕地。",
+             "pinyin": "Sòng guó yǒu yī gè nóngfū, měi tiān zài tián lǐ gēng dì.",
+             "en": "In the state of Song there was a farmer who tilled his field every day."},
+            {"han": "有一天，一只兔子飞快地跑过来，撞到了田边的树桩上，死了。",
+             "pinyin": "Yǒu yī tiān, yī zhī tùzi fēikuài de pǎo guòlái, zhuàng dào le tián biān de shùzhuāng shàng, sǐ le.",
+             "en": "One day a rabbit ran by very fast, crashed into a tree stump at the edge of the field, and died."},
+            {"han": "农夫高兴地把兔子拿回家，做了一顿好饭。",
+             "pinyin": "Nóngfū gāoxìng de bǎ tùzi ná huí jiā, zuò le yī dùn hǎo fàn.",
+             "en": "The farmer happily took the rabbit home and made himself a nice meal."},
+            {"han": "从此以后，他不再耕田，每天坐在树桩旁边，等着兔子再来。",
+             "pinyin": "Cóngcǐ yǐhòu, tā bù zài gēng tián, měi tiān zuò zài shùzhuāng pángbiān, děng zhe tùzi zài lái.",
+             "en": "From then on he stopped working his field; every day he sat by the stump waiting for another rabbit."},
+            {"han": "可是，再也没有兔子撞到树桩上了。他的田地长满了野草，他成了大家的笑话。",
+             "pinyin": "Kěshì, zài yě méi yǒu tùzi zhuàng dào shùzhuāng shàng le. Tā de tiándì zhǎng mǎn le yěcǎo, tā chéng le dàjiā de xiàohua.",
+             "en": "But no more rabbits ever crashed into the stump. His fields grew over with weeds, and he became the village laughingstock."},
+        ],
+        "moral": {"han": "不要把偶然当作必然，不要靠运气过日子。",
+                  "pinyin": "Bú yào bǎ ǒurán dàngzuò bìrán, bú yào kào yùnqì guò rìzi.",
+                  "en": "Don't mistake a fluke for a sure thing — don't live by luck."},
+    },
+    {
+        "id": 2,
+        "title_han":    "画蛇添足",
+        "title_pinyin": "Huà shé tiān zú",
+        "title_en":     "Drawing Legs on a Snake",
+        "youtube_id":   "Ll-n4rHfOyo",
+        "youtube_label":"LingoAce · animated story",
+        "body": [
+            {"han": "楚国有个人请客，给客人一壶酒。",
+             "pinyin": "Chǔ guó yǒu gè rén qǐngkè, gěi kèrén yī hú jiǔ.",
+             "en": "In the state of Chu, a man hosted some guests and gave them a single jug of wine."},
+            {"han": "人多酒少，他们想出一个办法：每个人在地上画一条蛇，谁先画完，谁就喝这壶酒。",
+             "pinyin": "Rén duō jiǔ shǎo, tāmen xiǎng chū yī gè bànfǎ: měi gè rén zài dì shàng huà yī tiáo shé, shéi xiān huà wán, shéi jiù hē zhè hú jiǔ.",
+             "en": "There were many people but little wine, so they made a deal: each person would draw a snake on the ground, and whoever finished first would get the jug."},
+            {"han": "一个人很快就画完了。他看别人还没画完，得意地说：\"你们都太慢了！我还能给蛇画上脚。\"",
+             "pinyin": "Yī gè rén hěn kuài jiù huà wán le. Tā kàn biérén hái méi huà wán, déyì de shuō: \"Nǐmen dōu tài màn le! Wǒ hái néng gěi shé huà shàng jiǎo.\"",
+             "en": "One man finished very quickly. Seeing the others still drawing, he said proudly, \"You're all so slow! I have time to give my snake feet too.\""},
+            {"han": "他正在画蛇脚的时候，另一个人画完了，把酒拿过去，说：\"蛇本来没有脚，你画的不是蛇了。\"",
+             "pinyin": "Tā zhèngzài huà shé jiǎo de shíhou, lìng yī gè rén huà wán le, bǎ jiǔ ná guòqù, shuō: \"Shé běnlái méi yǒu jiǎo, nǐ huà de bú shì shé le.\"",
+             "en": "While he was drawing the feet, another man finished, took the wine, and said, \"Snakes don't have feet — what you've drawn isn't a snake anymore.\""},
+            {"han": "第一个人就这样失去了酒。",
+             "pinyin": "Dì yī gè rén jiù zhèyàng shīqù le jiǔ.",
+             "en": "And so the first man lost the wine."},
+        ],
+        "moral": {"han": "做事过头，反而把好事变成坏事。",
+                  "pinyin": "Zuò shì guòtóu, fǎn'ér bǎ hǎo shì biàn chéng huài shì.",
+                  "en": "Overdoing something turns a win into a loss — gilding the lily."},
+    },
+    {
+        "id": 3,
+        "title_han":    "亡羊补牢",
+        "title_pinyin": "Wáng yáng bǔ láo",
+        "title_en":     "Mending the Pen After the Sheep Are Gone",
+        "youtube_id":   "jAx04A2X1ag",
+        "youtube_label":"LingoAce · animated story",
+        "body": [
+            {"han": "从前有个人，养了一群羊。",
+             "pinyin": "Cóngqián yǒu gè rén, yǎng le yī qún yáng.",
+             "en": "Once there was a man who kept a flock of sheep."},
+            {"han": "一天早上，他发现羊圈有一个洞，少了一只羊。",
+             "pinyin": "Yī tiān zǎoshang, tā fāxiàn yáng juàn yǒu yī gè dòng, shǎo le yī zhī yáng.",
+             "en": "One morning he noticed a hole in the pen and that one sheep was missing."},
+            {"han": "邻居说：\"你快把洞补好吧。\"他却说：\"羊已经丢了，补也没用。\"",
+             "pinyin": "Línjū shuō: \"Nǐ kuài bǎ dòng bǔ hǎo ba.\" Tā què shuō: \"Yáng yǐjīng diū le, bǔ yě méi yòng.\"",
+             "en": "A neighbor said, \"Hurry up and fix the hole.\" But he replied, \"The sheep is already gone — fixing it is no use.\""},
+            {"han": "第二天，又少了一只羊。",
+             "pinyin": "Dì èr tiān, yòu shǎo le yī zhī yáng.",
+             "en": "The next day, another sheep was missing."},
+            {"han": "他后悔了，赶紧把洞补好。从那以后，他的羊再也没有丢过。",
+             "pinyin": "Tā hòuhuǐ le, gǎnjǐn bǎ dòng bǔ hǎo. Cóng nà yǐhòu, tā de yáng zài yě méi yǒu diū guò.",
+             "en": "He regretted it and quickly mended the hole. From then on, no more sheep were lost."},
+        ],
+        "moral": {"han": "知道错了就改，永远不晚。",
+                  "pinyin": "Zhīdào cuò le jiù gǎi, yǒngyuǎn bù wǎn.",
+                  "en": "When you realize a mistake, fix it. It's never too late."},
+    },
+    {
+        "id": 4,
+        "title_han":    "塞翁失马",
+        "title_pinyin": "Sài wēng shī mǎ",
+        "title_en":     "The Old Man and the Lost Horse",
+        "youtube_id":   "3kWLqOmIFFM",
+        "youtube_label":"LingoAce · animated story",
+        "body": [
+            {"han": "边塞有一个老人，养了一匹好马。",
+             "pinyin": "Biānsài yǒu yī gè lǎorén, yǎng le yī pǐ hǎo mǎ.",
+             "en": "At the frontier lived an old man who kept a fine horse."},
+            {"han": "有一天，马跑丢了。邻居们都来安慰他，他却说：\"这不一定是坏事。\"",
+             "pinyin": "Yǒu yī tiān, mǎ pǎo diū le. Línjū men dōu lái ānwèi tā, tā què shuō: \"Zhè bù yīdìng shì huài shì.\"",
+             "en": "One day the horse ran away. The neighbors came to console him, but he said, \"This isn't necessarily bad.\""},
+            {"han": "过了几个月，那匹马回来了，还带回了一匹野马。邻居们都来祝贺，他却说：\"这不一定是好事。\"",
+             "pinyin": "Guò le jǐ gè yuè, nà pǐ mǎ huí lái le, hái dài huí le yī pǐ yěmǎ. Línjū men dōu lái zhùhè, tā què shuō: \"Zhè bù yīdìng shì hǎo shì.\"",
+             "en": "A few months later the horse came back, and brought a wild horse with it. The neighbors came to congratulate him, but he said, \"This isn't necessarily good.\""},
+            {"han": "老人的儿子骑那匹野马，摔断了腿。邻居们又来安慰，他说：\"这不一定是坏事。\"",
+             "pinyin": "Lǎorén de érzi qí nà pǐ yěmǎ, shuāi duàn le tuǐ. Línjū men yòu lái ānwèi, tā shuō: \"Zhè bù yīdìng shì huài shì.\"",
+             "en": "The old man's son rode the wild horse and broke his leg. The neighbors came to console him again, and he said, \"This isn't necessarily bad.\""},
+            {"han": "不久，国家打仗，年轻人都被征兵，大多数都死了。老人的儿子因为腿伤，没有去打仗，活了下来。",
+             "pinyin": "Bùjiǔ, guójiā dǎzhàng, niánqīng rén dōu bèi zhēngbīng, dà duōshù dōu sǐ le. Lǎorén de érzi yīnwèi tuǐ shāng, méi yǒu qù dǎzhàng, huó le xiàlái.",
+             "en": "Soon after, war broke out. Young men were drafted, and most of them died. Because of his broken leg, the old man's son didn't go, and he survived."},
+        ],
+        "moral": {"han": "好事坏事，常常会变。",
+                  "pinyin": "Hǎo shì huài shì, chángcháng huì biàn.",
+                  "en": "Good fortune and bad often turn into each other."},
+    },
+]
+
+
+# Canonical mā/má/mǎ/mà examples used by the Chart tab. Single speaker (FV1).
+CHART_TONES = (
+    (1, "妈", "mā", "mother"),
+    (2, "麻", "má", "hemp"),
+    (3, "马", "mǎ", "horse"),
+    (4, "骂", "mà", "to scold"),
 )
 
 
-def patch_index_html(cards: list[dict]) -> None:
-    js_array = "const flashcardData = " + json.dumps(cards, ensure_ascii=False, indent=4) + ";\n"
+def build_chart_audio() -> list[dict]:
+    """Fetch ma1..ma4 FV1 audio and return chart-tone metadata."""
+    AUDIO_DIR.mkdir(exist_ok=True)
+    out: list[dict] = []
+    for tone, char, pinyin, meaning in CHART_TONES:
+        dest = AUDIO_DIR / f"ma{tone}_FV1.mp3"
+        if not (dest.exists() and dest.stat().st_size > 1000):
+            ids = resolve_ids("ma", tone)
+            if "FV1" not in ids:
+                raise RuntimeError(f"FV1 not found for ma{tone}")
+            download_mp3(ids["FV1"], dest)
+            print(f"  chart ma{tone} ✓", file=sys.stderr)
+        out.append({
+            "tone": tone,
+            "char": char,
+            "pinyin": pinyin,
+            "meaning": meaning,
+            "audio": f"audio/{dest.name}",
+        })
+    return out
+
+
+def build_phrase_data() -> list[dict]:
+    PHRASE_AUDIO_DIR.mkdir(exist_ok=True, parents=True)
+    print(f"\nFetching {len(PHRASES)} phrase audio files from Tatoeba...", file=sys.stderr)
+
+    out: list[dict] = []
+    errors: list[tuple[int, str]] = []
+
+    def fetch(idx_audio_id: tuple[int, int]) -> tuple[int, int]:
+        idx, audio_id = idx_audio_id
+        dest = PHRASE_AUDIO_DIR / f"{audio_id}.mp3"
+        download_phrase(audio_id, dest)
+        return idx, audio_id
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = {pool.submit(fetch, (i, p[0])): (i, p[0]) for i, p in enumerate(PHRASES)}
+        for fut in as_completed(futures):
+            i, aid = futures[fut]
+            try:
+                fut.result()
+                print(f"  phrase {i+1}/{len(PHRASES)} (aid={aid}) ✓", file=sys.stderr)
+            except Exception as e:
+                errors.append((aid, str(e)))
+                print(f"  phrase {i+1}/{len(PHRASES)} (aid={aid}) ✗ {e}", file=sys.stderr)
+
+    if errors:
+        print(f"\n{len(errors)} phrase audio failures:", file=sys.stderr)
+        for aid, msg in errors:
+            print(f"  aid={aid}: {msg}", file=sys.stderr)
+        sys.exit(1)
+
+    for i, (audio_id, text, pinyin, meaning) in enumerate(PHRASES, start=1):
+        out.append({
+            "id": i,
+            "text": text,
+            "pinyin": pinyin,
+            "meaning": meaning,
+            "audio": f"audio/phrases/{audio_id}.mp3",
+            "tatoeba_audio_id": audio_id,
+        })
+    return out
+
+
+CARD_DATA_RE    = re.compile(r"const flashcardData = \[.*?\];\s*\n",         re.DOTALL)
+PHRASE_DATA_RE  = re.compile(r"const phraseData = \[.*?\];\s*\n",            re.DOTALL)
+CHART_DATA_RE   = re.compile(r"const chartTones = \[.*?\];\s*\n",            re.DOTALL)
+STORY_DATA_RE   = re.compile(r"const storyData = \[.*?\];\s*\n",             re.DOTALL)
+SPOTIFY_RE      = re.compile(r'const spotifyPlaylistId = "[^"]*";\s*\n',     re.DOTALL)
+
+
+def _replace_or_insert(html: str, regex: re.Pattern, new_block: str, insert_after: re.Pattern) -> str:
+    if regex.search(html):
+        return regex.sub(new_block, html, count=1)
+    return insert_after.sub(lambda m: m.group(0) + "\n        " + new_block, html, count=1)
+
+
+def patch_index_html(cards, phrases, chart_tones, stories, spotify_id) -> None:
+    blocks = {
+        "cards":   ("const flashcardData = ", json.dumps(cards,       ensure_ascii=False, indent=4)),
+        "phrases": ("const phraseData = ",    json.dumps(phrases,     ensure_ascii=False, indent=4)),
+        "chart":   ("const chartTones = ",    json.dumps(chart_tones, ensure_ascii=False, indent=4)),
+        "stories": ("const storyData = ",     json.dumps(stories,     ensure_ascii=False, indent=4)),
+    }
+    cards_js   = blocks["cards"][0]   + blocks["cards"][1]   + ";\n"
+    phrases_js = blocks["phrases"][0] + blocks["phrases"][1] + ";\n"
+    chart_js   = blocks["chart"][0]   + blocks["chart"][1]   + ";\n"
+    stories_js = blocks["stories"][0] + blocks["stories"][1] + ";\n"
+    spotify_js = f'const spotifyPlaylistId = "{spotify_id}";\n'
+
     html = INDEX_HTML.read_text(encoding="utf-8")
-    new_html, n = DATA_BLOCK_RE.subn(js_array, html, count=1)
-    if n != 1:
+
+    html, n_cards = CARD_DATA_RE.subn(cards_js, html, count=1)
+    if n_cards != 1:
         raise RuntimeError("could not find flashcardData block in index.html")
-    INDEX_HTML.write_text(new_html, encoding="utf-8")
-    print(f"Wrote {len(cards)} cards into {INDEX_HTML.name}", file=sys.stderr)
+
+    html = _replace_or_insert(html, PHRASE_DATA_RE, phrases_js, CARD_DATA_RE)
+    html = _replace_or_insert(html, CHART_DATA_RE,  chart_js,   PHRASE_DATA_RE)
+    html = _replace_or_insert(html, STORY_DATA_RE,  stories_js, CHART_DATA_RE)
+    html = _replace_or_insert(html, SPOTIFY_RE,     spotify_js, STORY_DATA_RE)
+
+    INDEX_HTML.write_text(html, encoding="utf-8")
+    print(f"Wrote {len(cards)} cards, {len(phrases)} phrases, {len(chart_tones)} chart tones, "
+          f"{len(stories)} stories, spotify={spotify_id} into {INDEX_HTML.name}", file=sys.stderr)
 
 
 if __name__ == "__main__":
     cards = build_flashcard_data()
-    patch_index_html(cards)
-    print(f"\nDone. {len(cards)} pairs, {len(list(AUDIO_DIR.glob('*.mp3')))} mp3 files in audio/.",
+    chart_tones = build_chart_audio()
+    phrases = build_phrase_data()
+    patch_index_html(cards, phrases, chart_tones, STORIES, SPOTIFY_PLAYLIST_ID)
+    n_words = len(list(AUDIO_DIR.glob('*.mp3')))
+    n_phrases = len(list(PHRASE_AUDIO_DIR.glob('*.mp3'))) if PHRASE_AUDIO_DIR.exists() else 0
+    print(f"\nDone. {len(cards)} pairs ({n_words} word mp3s), "
+          f"{len(phrases)} phrases ({n_phrases} phrase mp3s), "
+          f"{len(STORIES)} stories.",
           file=sys.stderr)

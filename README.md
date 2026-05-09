@@ -1,9 +1,17 @@
-# mandapanda — Mandarin Tone Contrast Drills
+# 🎵 Tonely
+
+> Tone training for ears that grew up without tones.
+
+(Repo name: `mandapanda` — internal handle.)
 
 A single-page flashcard app for training Mandarin tone perception. Each card pairs a high-frequency monosyllabic word with a tone-minimal-pair contrast (same syllable, different tone) so you train the perceptual category — not just the word.
 
 - **Study mode** — flip through 65 base/contrast pairs, see the character + pinyin + meaning, hear two native speakers pronounce each.
 - **Test mode** — audio plays a randomly chosen word, you pick which of the two pair members you heard. 2-AFC tone discrimination, score tracked.
+- **Phrases mode** — 40 short conversational sentences from native-speaker recordings, mostly built from words in the deck. Hear bank words used in real speech, with sentence-level prosody and tone sandhi.
+- **Chart mode** — Reference: the four tones plotted on a Chao 5-level pitch chart (high-level, rising, dipping, falling) plus the neutral tone. Click any tone to hear the canonical mā/má/mǎ/mà example.
+- **Stories mode** — 4 classic Chinese chengyu (idiom origin tales): 守株待兔, 画蛇添足, 亡羊补牢, 塞翁失马. Each shows the story sentence-by-sentence (character / pinyin / English) alongside an embedded YouTube video so you can listen while reading.
+- **Songs mode** — embedded Spotify playlist for listening practice and vocab exposure. Note: sung Mandarin flattens linguistic tones to fit the melody, so this is for vocabulary and fluency, not tone training.
 
 ## Usage
 
@@ -18,40 +26,60 @@ python3 -m http.server 8765
 
 ### Keyboard shortcuts
 
-| Key | Study mode | Test mode |
-|-----|------------|-----------|
-| ← / → | prev / next card | — / next question |
-| 1 / 2 | play speaker 1 / 2 | pick choice 1 / 2 |
-| b / c | base / contrast side | — |
-| r | — | replay audio |
+| Key | Study | Test | Phrases | Chart | Stories | Songs |
+|-----|-------|------|---------|-------|---------|-------|
+| ← / → | prev / next | — / next q | prev / next | — | prev / next story | — |
+| 1 / 2 | play speaker 1 / 2 | pick choice 1 / 2 | play (1) | — | — | — |
+| space / r | — | replay (`r`) | play / replay | — | — | — |
+| b / c | base / contrast | — | — | — | — | — |
 
-## Adding or swapping words
+In Chart mode, click any tone curve or info card to play its example. In Stories mode, the embedded YouTube player has its own controls.
 
-The full word list lives in [50_words.md](50_words.md) and the runtime data in the `PAIRS` array in [build.py](build.py). To change the deck:
+## Adding or swapping content
 
-1. Edit `PAIRS` in [build.py](build.py).
-2. Run `python3 build.py` — it resolves each `(syllable, tone, speaker)` to a Tone Perfect item ID, downloads any missing MP3s into `audio/`, and rewrites the `flashcardData` block in [index.html](index.html) in place.
+The runtime data sources are two arrays in [build.py](build.py):
+
+- `PAIRS` — the 65 tone-contrast word pairs (syllable, tone, speaker → Tone Perfect)
+- `PHRASES` — the 40 sentences (Tatoeba audio ID, characters, pinyin, English)
+
+To change either:
+
+1. Edit `PAIRS` and/or `PHRASES` in [build.py](build.py).
+2. Run `python3 build.py` — it resolves Tone Perfect item IDs, downloads any missing MP3s into `audio/` and `audio/phrases/`, and rewrites the `flashcardData` and `phraseData` blocks in [index.html](index.html) in place.
 
 The script is idempotent: existing audio files are skipped on re-runs.
 
+The human-readable word list lives in [50_words.md](50_words.md). To find new candidate phrases that use the existing word bank, see the curation notes in `build.py`'s `PHRASES` block — the candidates were drawn from Tatoeba's bulk Mandarin corpus filtered for sentences with audio that maximize bank-character coverage.
+
 ## Attribution
 
-All audio is sourced from MSU Libraries' **Tone Perfect** database:
+**Word audio — Tone Perfect** (MSU Libraries):
 
 > Catherine Ryu, Mandarin Tone Perception & Production Team, and Michigan State University Libraries. *Tone Perfect: Multimodal Database for Mandarin Chinese.* Accessed 7 May 2026. https://tone.lib.msu.edu/
 
-Tone Perfect is a free, open-access corpus of 9,840 audio recordings covering all 410 standard Mandarin syllables × 4 tones × 6 native speakers (3 female, 3 male). This project uses two voices (Female Voice 1 and Male Voice 1).
+A free, open-access corpus of 9,840 audio recordings covering all 410 standard Mandarin syllables × 4 tones × 6 native speakers (3 female, 3 male). This project uses two voices (Female Voice 1 and Male Voice 1). The maintainers ask that users [request access via their form](https://tone.lib.msu.edu/) and cite the corpus when redistributing. If you use this project, cite Tone Perfect — not this repo.
 
-The maintainers ask that users [request access via their form](https://tone.lib.msu.edu/) and cite the corpus when redistributing. If you use this project, cite Tone Perfect — not this repo.
+**Phrase audio — Tatoeba** (https://tatoeba.org/), licensed CC BY 2.0 FR:
+
+> Tatoeba — a community-built corpus of example sentences with audio recorded by native speakers across many languages. Each phrase MP3 in `audio/phrases/` is named after its Tatoeba `audio_id`; the original sentence + recording author can be looked up via Tatoeba's API.
+
+**Story videos — YouTube (LingoAce channel):**
+
+> The Stories tab embeds animated chengyu narrations from [LingoAce](https://www.youtube.com/@LingoAce). Videos remain hosted on YouTube; this app only embeds them via `youtube-nocookie.com`. The English translations and pinyin shown alongside each story are written for this project (chengyu narratives themselves are public domain, ~2,000+ years old).
+
+**Songs — Spotify:**
+
+> The Songs tab embeds a Spotify playlist via Spotify's standard web embed. Playback requires Spotify and is subject to Spotify's terms.
 
 ## Project layout
 
 ```
 mandapanda/
-├── index.html       # the app (HTML + CSS + JS + flashcardData inline)
-├── 50_words.md      # human-readable word list with pairs
-├── build.py         # word list source-of-truth + audio fetcher + index.html patcher
-├── audio/           # 258 MP3s (FV1 + MV1 for each of 129 unique syllable-tone combos)
+├── index.html         # the app (HTML + CSS + JS + flashcardData + phraseData inline)
+├── 50_words.md        # human-readable word list with pairs
+├── build.py           # word/phrase source-of-truth + audio fetcher + index.html patcher
+├── audio/             # 258 word MP3s (FV1 + MV1 for each of 129 unique syllable-tone combos)
+│   └── phrases/       # 40 phrase MP3s (Tatoeba audio_id-named)
 └── README.md
 ```
 

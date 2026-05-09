@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mandarin Tone Contrast Flashcards</title>
+    <title>Tonely — Mandarin tone training</title>
     <style>
         * {
             margin: 0;
@@ -266,6 +266,358 @@
         body.test-mode .study-only { display: none; }
         body.test-mode.unanswered .answer-only { visibility: hidden; }
         body.study-mode .test-only { display: none; }
+        body.phrases-mode .test-only { display: none; }
+        body.phrases-mode .study-only { display: none; }
+        body.study-mode .phrases-only { display: none; }
+        body.test-mode .phrases-only { display: none; }
+
+        /* Phrases mode: scale character display down (it's a sentence, not a single char) */
+        body.phrases-mode .character-display {
+            font-size: 1.7em;
+            line-height: 1.35;
+            text-align: center;
+            text-shadow: 0 0 25px rgba(15, 155, 142, 0.35);
+            padding: 0 10px;
+            margin-top: 10px;
+        }
+        body.phrases-mode .pinyin-display {
+            font-size: 1.05em;
+            text-align: center;
+            line-height: 1.4;
+            padding: 0 12px;
+            letter-spacing: 1px;
+        }
+        body.phrases-mode .meaning-display {
+            font-size: 1em;
+            line-height: 1.3;
+            text-align: center;
+            padding: 0 12px;
+        }
+        body.phrases-mode .tone-badge { display: none; }
+        body.phrases-mode #audioBtn2 { display: none; }
+        body.phrases-mode .pair-label { display: none; }
+
+        /* Chart mode: hide flashcard, nav, mode toggles */
+        body.chart-mode .study-only,
+        body.chart-mode .test-only,
+        body.chart-mode .card-container,
+        body.chart-mode .nav-buttons {
+            display: none !important;
+        }
+        body:not(.chart-mode) .chart-only { display: none; }
+
+        .chart-container {
+            background: linear-gradient(145deg, #1e2a4a, #1a2140);
+            border: 2px solid #2a3a6a;
+            border-radius: 20px;
+            padding: 28px 30px 24px;
+            max-width: 620px;
+            width: 100%;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            margin-bottom: 20px;
+        }
+        .chart-container h2 {
+            color: #e94560;
+            text-align: center;
+            font-size: 1.25em;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .tone-chart-svg {
+            width: 100%;
+            height: auto;
+            display: block;
+            font-family: inherit;
+        }
+        .tone-chart-svg .grid-line {
+            stroke: #2a3a6a;
+            stroke-width: 1;
+            stroke-dasharray: 2, 4;
+        }
+        .tone-chart-svg .grid-axis {
+            stroke: #4a5a8a;
+            stroke-width: 1.2;
+        }
+        .tone-chart-svg .axis-label {
+            fill: #6c6c80;
+            font-size: 12px;
+        }
+        .tone-chart-svg .tone-curve {
+            fill: none;
+            stroke-width: 4;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            cursor: pointer;
+            transition: stroke-width 0.2s ease, filter 0.2s ease;
+        }
+        .tone-chart-svg .tone-curve:hover,
+        .tone-chart-svg .tone-curve.playing {
+            stroke-width: 6;
+            filter: drop-shadow(0 0 10px currentColor);
+        }
+        .tone-chart-svg .tone-curve.t1 { stroke: #e94560; color: #e94560; }
+        .tone-chart-svg .tone-curve.t2 { stroke: #0f9b8e; color: #0f9b8e; }
+        .tone-chart-svg .tone-curve.t3 { stroke: #5b6abf; color: #5b6abf; }
+        .tone-chart-svg .tone-curve.t4 { stroke: #f0a500; color: #f0a500; }
+        .tone-chart-svg .tone-neutral-dot {
+            fill: #8a8aa8;
+        }
+        .tone-chart-svg .tone-slot-label {
+            fill: #c0c8e0;
+            font-size: 13px;
+            text-anchor: middle;
+            font-weight: bold;
+        }
+        .tone-chart-svg .tone-slot-pinyin {
+            fill: #a0a8c0;
+            font-size: 14px;
+            text-anchor: middle;
+        }
+        .tone-chart-svg .neutral-label {
+            fill: #6c6c80;
+        }
+
+        .tone-info-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 22px;
+        }
+        .tone-info-card {
+            background: linear-gradient(145deg, #2a3a6a, #1e2a4e);
+            border: 1px solid #3a4a7a;
+            border-radius: 12px;
+            padding: 12px 6px 10px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-align: center;
+            font-family: inherit;
+            color: #c0c8e0;
+        }
+        .tone-info-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(233, 69, 96, 0.25);
+        }
+        .tone-info-card.playing {
+            box-shadow: 0 0 25px currentColor;
+            animation: pulse 0.8s ease infinite;
+        }
+        .tone-info-card .char {
+            font-size: 1.9em;
+            line-height: 1;
+            color: #ffffff;
+        }
+        .tone-info-card .pinyin {
+            font-size: 1em;
+            margin-top: 6px;
+            letter-spacing: 1px;
+        }
+        .tone-info-card .meaning {
+            font-size: 0.72em;
+            color: #8a8aa8;
+            font-style: italic;
+            margin-top: 3px;
+        }
+        .tone-info-card .tone-num {
+            font-size: 0.7em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+        .tone-info-card.t1 { color: #e94560; }
+        .tone-info-card.t1:hover { border-color: #e94560; }
+        .tone-info-card.t2 { color: #0f9b8e; }
+        .tone-info-card.t2:hover { border-color: #0f9b8e; }
+        .tone-info-card.t3 { color: #5b6abf; }
+        .tone-info-card.t3:hover { border-color: #5b6abf; }
+        .tone-info-card.t4 { color: #f0a500; }
+        .tone-info-card.t4:hover { border-color: #f0a500; }
+
+        .chart-note {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #2a3a6a;
+            color: #8a8aa8;
+            font-size: 0.82em;
+            line-height: 1.55;
+        }
+        .chart-note strong { color: #c0c8e0; }
+
+        /* Songs + Stories modes share the chart-mode-style hide rules */
+        body.songs-mode .study-only,
+        body.songs-mode .test-only,
+        body.songs-mode .card-container,
+        body.songs-mode .nav-buttons,
+        body.stories-mode .study-only,
+        body.stories-mode .test-only,
+        body.stories-mode .card-container,
+        body.stories-mode .nav-buttons {
+            display: none !important;
+        }
+        body:not(.songs-mode) .songs-only { display: none; }
+        body:not(.stories-mode) .stories-only { display: none; }
+        body.stories-mode .nav-btn.study-only { display: none; }
+        body.stories-mode .counter { display: none; }
+
+        /* App-mode-toggle: wrap on narrow screens since we have 6 buttons */
+        .app-mode-toggle {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 640px;
+        }
+        .app-mode-btn { padding: 9px 20px; }
+
+        /* Songs container */
+        .songs-container {
+            background: linear-gradient(145deg, #1e2a4a, #1a2140);
+            border: 2px solid #2a3a6a;
+            border-radius: 20px;
+            padding: 26px 28px 22px;
+            max-width: 620px;
+            width: 100%;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            margin-bottom: 20px;
+        }
+        .songs-container h2 {
+            color: #e94560;
+            text-align: center;
+            font-size: 1.25em;
+            margin-bottom: 6px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .songs-container .subtitle-row {
+            color: #8a8aa8;
+            text-align: center;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+        .songs-container iframe {
+            border-radius: 12px;
+            display: block;
+            width: 100%;
+            border: none;
+        }
+        .songs-note {
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px solid #2a3a6a;
+            color: #8a8aa8;
+            font-size: 0.82em;
+            line-height: 1.5;
+        }
+
+        /* Stories container */
+        .stories-container {
+            background: linear-gradient(145deg, #1e2a4a, #1a2140);
+            border: 2px solid #2a3a6a;
+            border-radius: 20px;
+            padding: 24px 26px 22px;
+            max-width: 640px;
+            width: 100%;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            margin-bottom: 20px;
+        }
+        .story-header {
+            text-align: center;
+            margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #2a3a6a;
+        }
+        .story-counter {
+            color: #6c6c80;
+            font-size: 0.78em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .story-title-han {
+            font-size: 2em;
+            color: #ffffff;
+            margin-bottom: 4px;
+            line-height: 1.1;
+        }
+        .story-title-pinyin {
+            font-size: 1em;
+            color: #c0c8e0;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        .story-title-en {
+            color: #8a8aa8;
+            font-style: italic;
+            font-size: 0.92em;
+        }
+
+        .story-video {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            margin-bottom: 18px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+        }
+        .story-video iframe { width: 100%; height: 100%; border: 0; }
+
+        .story-body {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .story-sentence {
+            padding: 12px 14px;
+            background: rgba(20, 28, 50, 0.5);
+            border-radius: 10px;
+            border-left: 3px solid #0f9b8e;
+        }
+        .story-sentence .han {
+            color: #ffffff;
+            font-size: 1.15em;
+            line-height: 1.5;
+        }
+        .story-sentence .pinyin {
+            color: #c0c8e0;
+            font-size: 0.92em;
+            margin-top: 5px;
+            letter-spacing: 0.5px;
+            line-height: 1.4;
+        }
+        .story-sentence .en {
+            color: #8a8aa8;
+            font-size: 0.88em;
+            font-style: italic;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+        .story-moral {
+            margin-top: 18px;
+            padding: 14px;
+            background: rgba(233, 69, 96, 0.08);
+            border-left: 3px solid #e94560;
+            border-radius: 10px;
+        }
+        .story-moral .label {
+            color: #e94560;
+            font-weight: bold;
+            font-size: 0.78em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .stories-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 16px;
+            gap: 12px;
+        }
+        .stories-nav .nav-btn { padding: 10px 22px; }
 
         .test-prompt {
             position: absolute;
@@ -387,12 +739,16 @@
 </head>
 <body>
 
-    <h1>🔊 Tone Contrast Drills</h1>
-    <p class="subtitle" id="subtitle">Loading…</p>
+    <h1>🎵 Tonely</h1>
+    <p class="subtitle" id="subtitle">Tone training for ears that grew up without tones.</p>
 
     <div class="app-mode-toggle">
         <button class="app-mode-btn active" onclick="setAppMode('study')">Study</button>
         <button class="app-mode-btn" onclick="setAppMode('test')">Test</button>
+        <button class="app-mode-btn" onclick="setAppMode('phrases')">Phrases</button>
+        <button class="app-mode-btn" onclick="setAppMode('chart')">Chart</button>
+        <button class="app-mode-btn" onclick="setAppMode('stories')">Stories</button>
+        <button class="app-mode-btn" onclick="setAppMode('songs')">Songs</button>
     </div>
 
     <div class="mode-toggle study-only">
@@ -442,6 +798,111 @@
         <span class="pct"></span>
     </div>
 
+    <div class="chart-container chart-only">
+        <h2>The Four Tones of Mandarin</h2>
+        <svg class="tone-chart-svg" viewBox="0 0 540 240" xmlns="http://www.w3.org/2000/svg">
+            <line class="grid-axis" x1="40" y1="20" x2="40" y2="180" />
+            <line class="grid-line" x1="40"  y1="30"  x2="530" y2="30"  />
+            <line class="grid-line" x1="40"  y1="65"  x2="530" y2="65"  />
+            <line class="grid-line" x1="40"  y1="100" x2="530" y2="100" />
+            <line class="grid-line" x1="40"  y1="135" x2="530" y2="135" />
+            <line class="grid-line" x1="40"  y1="170" x2="530" y2="170" />
+            <text class="axis-label" x="32" y="34" text-anchor="end">5</text>
+            <text class="axis-label" x="32" y="69" text-anchor="end">4</text>
+            <text class="axis-label" x="32" y="104" text-anchor="end">3</text>
+            <text class="axis-label" x="32" y="139" text-anchor="end">2</text>
+            <text class="axis-label" x="32" y="174" text-anchor="end">1</text>
+            <text class="axis-label" x="14" y="105" text-anchor="middle"
+                  transform="rotate(-90, 14, 105)">pitch</text>
+
+            <line     class="tone-curve t1" data-tone="1" x1="60" y1="30" x2="140" y2="30" />
+            <line     class="tone-curve t2" data-tone="2" x1="170" y1="100" x2="250" y2="30" />
+            <polyline class="tone-curve t3" data-tone="3" points="280,135 320,170 360,65" />
+            <line     class="tone-curve t4" data-tone="4" x1="390" y1="30" x2="470" y2="170" />
+
+            <circle class="tone-neutral-dot" cx="500" cy="100" r="5" />
+
+            <text class="tone-slot-pinyin"  x="100" y="200">mā</text>
+            <text class="tone-slot-pinyin"  x="210" y="200">má</text>
+            <text class="tone-slot-pinyin"  x="320" y="200">mǎ</text>
+            <text class="tone-slot-pinyin"  x="430" y="200">mà</text>
+            <text class="tone-slot-pinyin neutral-label" x="500" y="200">·ma</text>
+
+            <text class="tone-slot-label"  x="100" y="222">tone 1</text>
+            <text class="tone-slot-label"  x="210" y="222">tone 2</text>
+            <text class="tone-slot-label"  x="320" y="222">tone 3</text>
+            <text class="tone-slot-label"  x="430" y="222">tone 4</text>
+            <text class="tone-slot-label neutral-label" x="500" y="222">neutral</text>
+        </svg>
+
+        <div class="tone-info-cards">
+            <button class="tone-info-card t1" data-tone="1">
+                <div class="tone-num">1 · High</div>
+                <div class="char">妈</div>
+                <div class="pinyin">mā</div>
+                <div class="meaning">mother</div>
+            </button>
+            <button class="tone-info-card t2" data-tone="2">
+                <div class="tone-num">2 · Rising</div>
+                <div class="char">麻</div>
+                <div class="pinyin">má</div>
+                <div class="meaning">hemp</div>
+            </button>
+            <button class="tone-info-card t3" data-tone="3">
+                <div class="tone-num">3 · Dipping</div>
+                <div class="char">马</div>
+                <div class="pinyin">mǎ</div>
+                <div class="meaning">horse</div>
+            </button>
+            <button class="tone-info-card t4" data-tone="4">
+                <div class="tone-num">4 · Falling</div>
+                <div class="char">骂</div>
+                <div class="pinyin">mà</div>
+                <div class="meaning">to scold</div>
+            </button>
+        </div>
+
+        <p class="chart-note">
+            Pitch is shown on a relative <strong>5-level scale</strong> (Chao 1948): <strong>1 = lowest</strong>, <strong>5 = highest</strong>. Click any tone to hear an example. Contours: <strong>1</strong> high level (5–5), <strong>2</strong> rising (3–5), <strong>3</strong> dipping (2–1–4), <strong>4</strong> falling (5–1). The <strong>neutral tone</strong> is short and unstressed; its pitch shifts depending on the previous tone (often around level 2 after tone 1, lower after tone 4).
+        </p>
+    </div>
+
+    <div class="songs-container songs-only">
+        <h2>🎶 Songs</h2>
+        <p class="subtitle-row">Listening practice in real Mandarin music. Note: sung melodies override linguistic tones, so this is for vocab and exposure, not tone training.</p>
+        <iframe id="spotifyEmbed" src="" height="380" allow="autoplay; encrypted-media" loading="lazy"></iframe>
+        <p class="songs-note">
+            Playlist hosted on <a href="https://open.spotify.com/" target="_blank" rel="noopener" style="color: #8a8aa8;">Spotify</a>. Open in a Spotify app to save tracks or see lyrics.
+        </p>
+    </div>
+
+    <div class="stories-container stories-only">
+        <div class="story-header">
+            <div class="story-counter" id="storyCounter">Story 1 / 4</div>
+            <div class="story-title-han"    id="storyTitleHan">…</div>
+            <div class="story-title-pinyin" id="storyTitlePinyin">…</div>
+            <div class="story-title-en"     id="storyTitleEn">…</div>
+        </div>
+        <div class="story-video">
+            <iframe id="storyVideo" src="" allow="encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+        </div>
+        <div class="story-body" id="storyBody"></div>
+        <div class="story-moral" id="storyMoral">
+            <div class="label">Moral</div>
+            <div class="han"></div>
+            <div class="pinyin"></div>
+            <div class="en"></div>
+        </div>
+        <div class="stories-nav">
+            <button class="nav-btn" onclick="prevStory()">◀ Previous</button>
+            <span class="story-counter" id="storyCounterBottom"></span>
+            <button class="nav-btn" onclick="nextStory()">Next ▶</button>
+        </div>
+        <p class="songs-note">
+            Videos hosted on YouTube via <a href="https://www.youtube-nocookie.com/" target="_blank" rel="noopener" style="color: #8a8aa8;">youtube-nocookie.com</a>. Channel: LingoAce.
+        </p>
+    </div>
+
     <div class="nav-buttons">
         <button class="nav-btn study-only" id="prevBtn" onclick="prevCard()">◀ Previous</button>
         <span class="counter study-only" id="counter">1 / 100</span>
@@ -449,9 +910,9 @@
     </div>
 
     <p class="attribution">
-        Audio from <a href="https://tone.lib.msu.edu/" target="_blank" rel="noopener">Tone Perfect</a>:
-        Catherine Ryu, Mandarin Tone Perception &amp; Production Team, and Michigan State University Libraries.
-        <em>Tone Perfect: Multimodal Database for Mandarin Chinese.</em>
+        Word audio from <a href="https://tone.lib.msu.edu/" target="_blank" rel="noopener">Tone Perfect</a>
+        (Catherine Ryu, Mandarin Tone Perception &amp; Production Team, MSU Libraries).
+        Phrase audio from <a href="https://tatoeba.org/" target="_blank" rel="noopener">Tatoeba</a> (CC BY 2.0 FR).
     </p>
 
     <script>
@@ -1436,6 +1897,523 @@
         "audioContrast2": "audio/zao4_MV1.mp3"
     }
 ];
+        const phraseData = [
+    {
+        "id": 1,
+        "text": "你在听我说吗？",
+        "pinyin": "Nǐ zài tīng wǒ shuō ma?",
+        "meaning": "Are you listening to me?",
+        "audio": "audio/phrases/25746.mp3",
+        "tatoeba_audio_id": 25746
+    },
+    {
+        "id": 2,
+        "text": "今天天气很好。",
+        "pinyin": "Jīntiān tiānqì hěn hǎo.",
+        "meaning": "The weather is nice today.",
+        "audio": "audio/phrases/26040.mp3",
+        "tatoeba_audio_id": 26040
+    },
+    {
+        "id": 3,
+        "text": "我今天想早睡。",
+        "pinyin": "Wǒ jīntiān xiǎng zǎo shuì.",
+        "meaning": "I want to sleep early today.",
+        "audio": "audio/phrases/1280206.mp3",
+        "tatoeba_audio_id": 1280206
+    },
+    {
+        "id": 4,
+        "text": "我每天都吃水果。",
+        "pinyin": "Wǒ měitiān dōu chī shuǐguǒ.",
+        "meaning": "I eat fruit every day.",
+        "audio": "audio/phrases/1279628.mp3",
+        "tatoeba_audio_id": 1279628
+    },
+    {
+        "id": 5,
+        "text": "要不要一起去？",
+        "pinyin": "Yào bú yào yīqǐ qù?",
+        "meaning": "Want to go together?",
+        "audio": "audio/phrases/1277915.mp3",
+        "tatoeba_audio_id": 1277915
+    },
+    {
+        "id": 6,
+        "text": "我想看看。",
+        "pinyin": "Wǒ xiǎng kàn kan.",
+        "meaning": "I want to take a look.",
+        "audio": "audio/phrases/25745.mp3",
+        "tatoeba_audio_id": 25745
+    },
+    {
+        "id": 7,
+        "text": "我什么都不想喝。",
+        "pinyin": "Wǒ shénme dōu bù xiǎng hē.",
+        "meaning": "I don't want to drink anything.",
+        "audio": "audio/phrases/25537.mp3",
+        "tatoeba_audio_id": 25537
+    },
+    {
+        "id": 8,
+        "text": "我不想等那么久。",
+        "pinyin": "Wǒ bù xiǎng děng nàme jiǔ.",
+        "meaning": "I don't want to wait that long.",
+        "audio": "audio/phrases/25858.mp3",
+        "tatoeba_audio_id": 25858
+    },
+    {
+        "id": 9,
+        "text": "我能问一些问题吗？",
+        "pinyin": "Wǒ néng wèn yīxiē wèntí ma?",
+        "meaning": "Can I ask some questions?",
+        "audio": "audio/phrases/25900.mp3",
+        "tatoeba_audio_id": 25900
+    },
+    {
+        "id": 10,
+        "text": "我已经吃饱了，谢谢。",
+        "pinyin": "Wǒ yǐjīng chī bǎo le, xièxie.",
+        "meaning": "I'm already full, thank you.",
+        "audio": "audio/phrases/26450.mp3",
+        "tatoeba_audio_id": 26450
+    },
+    {
+        "id": 11,
+        "text": "我今天感觉好多了。",
+        "pinyin": "Wǒ jīntiān gǎnjué hǎoduō le.",
+        "meaning": "I feel much better today.",
+        "audio": "audio/phrases/26986.mp3",
+        "tatoeba_audio_id": 26986
+    },
+    {
+        "id": 12,
+        "text": "他和我一样高。",
+        "pinyin": "Tā hé wǒ yīyàng gāo.",
+        "meaning": "He's as tall as me.",
+        "audio": "audio/phrases/26557.mp3",
+        "tatoeba_audio_id": 26557
+    },
+    {
+        "id": 13,
+        "text": "我买不起那个。",
+        "pinyin": "Wǒ mǎi bù qǐ nàge.",
+        "meaning": "I can't afford that.",
+        "audio": "audio/phrases/26798.mp3",
+        "tatoeba_audio_id": 26798
+    },
+    {
+        "id": 14,
+        "text": "我去不了，也不想去。",
+        "pinyin": "Wǒ qù bù liǎo, yě bù xiǎng qù.",
+        "meaning": "I can't go, and I don't want to.",
+        "audio": "audio/phrases/27398.mp3",
+        "tatoeba_audio_id": 27398
+    },
+    {
+        "id": 15,
+        "text": "你想走的时候就走吧。",
+        "pinyin": "Nǐ xiǎng zǒu de shíhou jiù zǒu ba.",
+        "meaning": "Leave whenever you want.",
+        "audio": "audio/phrases/25499.mp3",
+        "tatoeba_audio_id": 25499
+    },
+    {
+        "id": 16,
+        "text": "我想看这部电影。",
+        "pinyin": "Wǒ xiǎng kàn zhè bù diànyǐng.",
+        "meaning": "I want to watch this movie.",
+        "audio": "audio/phrases/26702.mp3",
+        "tatoeba_audio_id": 26702
+    },
+    {
+        "id": 17,
+        "text": "我们早点走不是更好吗？",
+        "pinyin": "Wǒmen zǎo diǎn zǒu bú shì gèng hǎo ma?",
+        "meaning": "Wouldn't it be better to leave earlier?",
+        "audio": "audio/phrases/26300.mp3",
+        "tatoeba_audio_id": 26300
+    },
+    {
+        "id": 18,
+        "text": "你更喜欢哪个，这个还是那个？",
+        "pinyin": "Nǐ gèng xǐhuan nǎge, zhège háishì nàge?",
+        "meaning": "Which do you prefer, this one or that one?",
+        "audio": "audio/phrases/25775.mp3",
+        "tatoeba_audio_id": 25775
+    },
+    {
+        "id": 19,
+        "text": "他不是我的男朋友，他是我的哥哥。",
+        "pinyin": "Tā bú shì wǒ de nán péngyou, tā shì wǒ de gēge.",
+        "meaning": "He's not my boyfriend, he's my older brother.",
+        "audio": "audio/phrases/1280930.mp3",
+        "tatoeba_audio_id": 1280930
+    },
+    {
+        "id": 20,
+        "text": "一个是新的，另一个是旧的。",
+        "pinyin": "Yīge shì xīn de, lìng yīge shì jiù de.",
+        "meaning": "One is new, the other is old.",
+        "audio": "audio/phrases/27402.mp3",
+        "tatoeba_audio_id": 27402
+    },
+    {
+        "id": 21,
+        "text": "等她回来的时候问问她。",
+        "pinyin": "Děng tā huílái de shíhou wèn wen tā.",
+        "meaning": "Ask her when she comes back.",
+        "audio": "audio/phrases/25445.mp3",
+        "tatoeba_audio_id": 25445
+    },
+    {
+        "id": 22,
+        "text": "他半夜打了个电话给我。",
+        "pinyin": "Tā bànyè dǎ le ge diànhuà gěi wǒ.",
+        "meaning": "He called me in the middle of the night.",
+        "audio": "audio/phrases/26095.mp3",
+        "tatoeba_audio_id": 26095
+    },
+    {
+        "id": 23,
+        "text": "你回来之前我已经走了。",
+        "pinyin": "Nǐ huílái zhīqián wǒ yǐjīng zǒu le.",
+        "meaning": "I'd already left before you came back.",
+        "audio": "audio/phrases/26612.mp3",
+        "tatoeba_audio_id": 26612
+    },
+    {
+        "id": 24,
+        "text": "他很快就会回来的。",
+        "pinyin": "Tā hěn kuài jiù huì huílái de.",
+        "meaning": "He'll be back soon.",
+        "audio": "audio/phrases/25816.mp3",
+        "tatoeba_audio_id": 25816
+    },
+    {
+        "id": 25,
+        "text": "我们明天早上九点见好吗？",
+        "pinyin": "Wǒmen míngtiān zǎoshang jiǔ diǎn jiàn hǎo ma?",
+        "meaning": "Shall we meet at 9 tomorrow morning?",
+        "audio": "audio/phrases/1281126.mp3",
+        "tatoeba_audio_id": 1281126
+    },
+    {
+        "id": 26,
+        "text": "我今天不想起床。",
+        "pinyin": "Wǒ jīntiān bù xiǎng qǐchuáng.",
+        "meaning": "I don't want to get up today.",
+        "audio": "audio/phrases/992955.mp3",
+        "tatoeba_audio_id": 992955
+    },
+    {
+        "id": 27,
+        "text": "我只想和你在一起。",
+        "pinyin": "Wǒ zhǐ xiǎng hé nǐ zài yīqǐ.",
+        "meaning": "I just want to be with you.",
+        "audio": "audio/phrases/1281062.mp3",
+        "tatoeba_audio_id": 1281062
+    },
+    {
+        "id": 28,
+        "text": "你昨天上午在打网球吗？",
+        "pinyin": "Nǐ zuótiān shàngwǔ zài dǎ wǎngqiú ma?",
+        "meaning": "Were you playing tennis yesterday morning?",
+        "audio": "audio/phrases/1281091.mp3",
+        "tatoeba_audio_id": 1281091
+    },
+    {
+        "id": 29,
+        "text": "我在想你今天会不会来。",
+        "pinyin": "Wǒ zài xiǎng nǐ jīntiān huì bú huì lái.",
+        "meaning": "I was wondering if you'd come today.",
+        "audio": "audio/phrases/27535.mp3",
+        "tatoeba_audio_id": 27535
+    },
+    {
+        "id": 30,
+        "text": "今天要不要去我家看看？",
+        "pinyin": "Jīntiān yào bú yào qù wǒ jiā kàn kan?",
+        "meaning": "Want to come see my house today?",
+        "audio": "audio/phrases/1278056.mp3",
+        "tatoeba_audio_id": 1278056
+    },
+    {
+        "id": 31,
+        "text": "我等我的一个朋友等了一小时。",
+        "pinyin": "Wǒ děng wǒ de yī ge péngyou děng le yī xiǎoshí.",
+        "meaning": "I waited for a friend for an hour.",
+        "audio": "audio/phrases/26785.mp3",
+        "tatoeba_audio_id": 26785
+    },
+    {
+        "id": 32,
+        "text": "你走了，我们都会想你的。",
+        "pinyin": "Nǐ zǒu le, wǒmen dōu huì xiǎng nǐ de.",
+        "meaning": "When you leave, we'll all miss you.",
+        "audio": "audio/phrases/25519.mp3",
+        "tatoeba_audio_id": 25519
+    },
+    {
+        "id": 33,
+        "text": "如果我是你，我也会这么做。",
+        "pinyin": "Rúguǒ wǒ shì nǐ, wǒ yě huì zhème zuò.",
+        "meaning": "If I were you, I'd do the same.",
+        "audio": "audio/phrases/26068.mp3",
+        "tatoeba_audio_id": 26068
+    },
+    {
+        "id": 34,
+        "text": "我们在下个加油站停一下。",
+        "pinyin": "Wǒmen zài xià ge jiāyóuzhàn tíng yīxià.",
+        "meaning": "Let's stop at the next gas station.",
+        "audio": "audio/phrases/25931.mp3",
+        "tatoeba_audio_id": 25931
+    },
+    {
+        "id": 35,
+        "text": "雨不停，我们不会出去。",
+        "pinyin": "Yǔ bù tíng, wǒmen bú huì chū qù.",
+        "meaning": "The rain won't stop, so we won't go out.",
+        "audio": "audio/phrases/25416.mp3",
+        "tatoeba_audio_id": 25416
+    },
+    {
+        "id": 36,
+        "text": "这看上去像个蛋。",
+        "pinyin": "Zhè kàn shàngqù xiàng ge dàn.",
+        "meaning": "This looks like an egg.",
+        "audio": "audio/phrases/26911.mp3",
+        "tatoeba_audio_id": 26911
+    },
+    {
+        "id": 37,
+        "text": "你现在好点了吗？",
+        "pinyin": "Nǐ xiànzài hǎo diǎn le ma?",
+        "meaning": "Are you feeling better now?",
+        "audio": "audio/phrases/25839.mp3",
+        "tatoeba_audio_id": 25839
+    },
+    {
+        "id": 38,
+        "text": "不要把门开着。",
+        "pinyin": "Bú yào bǎ mén kāi zhe.",
+        "meaning": "Don't leave the door open.",
+        "audio": "audio/phrases/26936.mp3",
+        "tatoeba_audio_id": 26936
+    },
+    {
+        "id": 39,
+        "text": "你是我的一切。",
+        "pinyin": "Nǐ shì wǒ de yīqiè.",
+        "meaning": "You are my everything.",
+        "audio": "audio/phrases/26082.mp3",
+        "tatoeba_audio_id": 26082
+    },
+    {
+        "id": 40,
+        "text": "这是你的信。",
+        "pinyin": "Zhè shì nǐ de xìn.",
+        "meaning": "This is your letter.",
+        "audio": "audio/phrases/26348.mp3",
+        "tatoeba_audio_id": 26348
+    }
+];
+        const chartTones = [
+    {
+        "tone": 1,
+        "char": "妈",
+        "pinyin": "mā",
+        "meaning": "mother",
+        "audio": "audio/ma1_FV1.mp3"
+    },
+    {
+        "tone": 2,
+        "char": "麻",
+        "pinyin": "má",
+        "meaning": "hemp",
+        "audio": "audio/ma2_FV1.mp3"
+    },
+    {
+        "tone": 3,
+        "char": "马",
+        "pinyin": "mǎ",
+        "meaning": "horse",
+        "audio": "audio/ma3_FV1.mp3"
+    },
+    {
+        "tone": 4,
+        "char": "骂",
+        "pinyin": "mà",
+        "meaning": "to scold",
+        "audio": "audio/ma4_FV1.mp3"
+    }
+];
+
+        const storyData = [
+    {
+        "id": 1,
+        "title_han": "守株待兔",
+        "title_pinyin": "Shǒu zhū dài tù",
+        "title_en": "Waiting by the Stump",
+        "youtube_id": "FVUgXgIEnSo",
+        "youtube_label": "LingoAce · animated story",
+        "body": [
+            {
+                "han": "宋国有一个农夫，每天在田里耕地。",
+                "pinyin": "Sòng guó yǒu yī gè nóngfū, měi tiān zài tián lǐ gēng dì.",
+                "en": "In the state of Song there was a farmer who tilled his field every day."
+            },
+            {
+                "han": "有一天，一只兔子飞快地跑过来，撞到了田边的树桩上，死了。",
+                "pinyin": "Yǒu yī tiān, yī zhī tùzi fēikuài de pǎo guòlái, zhuàng dào le tián biān de shùzhuāng shàng, sǐ le.",
+                "en": "One day a rabbit ran by very fast, crashed into a tree stump at the edge of the field, and died."
+            },
+            {
+                "han": "农夫高兴地把兔子拿回家，做了一顿好饭。",
+                "pinyin": "Nóngfū gāoxìng de bǎ tùzi ná huí jiā, zuò le yī dùn hǎo fàn.",
+                "en": "The farmer happily took the rabbit home and made himself a nice meal."
+            },
+            {
+                "han": "从此以后，他不再耕田，每天坐在树桩旁边，等着兔子再来。",
+                "pinyin": "Cóngcǐ yǐhòu, tā bù zài gēng tián, měi tiān zuò zài shùzhuāng pángbiān, děng zhe tùzi zài lái.",
+                "en": "From then on he stopped working his field; every day he sat by the stump waiting for another rabbit."
+            },
+            {
+                "han": "可是，再也没有兔子撞到树桩上了。他的田地长满了野草，他成了大家的笑话。",
+                "pinyin": "Kěshì, zài yě méi yǒu tùzi zhuàng dào shùzhuāng shàng le. Tā de tiándì zhǎng mǎn le yěcǎo, tā chéng le dàjiā de xiàohua.",
+                "en": "But no more rabbits ever crashed into the stump. His fields grew over with weeds, and he became the village laughingstock."
+            }
+        ],
+        "moral": {
+            "han": "不要把偶然当作必然，不要靠运气过日子。",
+            "pinyin": "Bú yào bǎ ǒurán dàngzuò bìrán, bú yào kào yùnqì guò rìzi.",
+            "en": "Don't mistake a fluke for a sure thing — don't live by luck."
+        }
+    },
+    {
+        "id": 2,
+        "title_han": "画蛇添足",
+        "title_pinyin": "Huà shé tiān zú",
+        "title_en": "Drawing Legs on a Snake",
+        "youtube_id": "Ll-n4rHfOyo",
+        "youtube_label": "LingoAce · animated story",
+        "body": [
+            {
+                "han": "楚国有个人请客，给客人一壶酒。",
+                "pinyin": "Chǔ guó yǒu gè rén qǐngkè, gěi kèrén yī hú jiǔ.",
+                "en": "In the state of Chu, a man hosted some guests and gave them a single jug of wine."
+            },
+            {
+                "han": "人多酒少，他们想出一个办法：每个人在地上画一条蛇，谁先画完，谁就喝这壶酒。",
+                "pinyin": "Rén duō jiǔ shǎo, tāmen xiǎng chū yī gè bànfǎ: měi gè rén zài dì shàng huà yī tiáo shé, shéi xiān huà wán, shéi jiù hē zhè hú jiǔ.",
+                "en": "There were many people but little wine, so they made a deal: each person would draw a snake on the ground, and whoever finished first would get the jug."
+            },
+            {
+                "han": "一个人很快就画完了。他看别人还没画完，得意地说：\"你们都太慢了！我还能给蛇画上脚。\"",
+                "pinyin": "Yī gè rén hěn kuài jiù huà wán le. Tā kàn biérén hái méi huà wán, déyì de shuō: \"Nǐmen dōu tài màn le! Wǒ hái néng gěi shé huà shàng jiǎo.\"",
+                "en": "One man finished very quickly. Seeing the others still drawing, he said proudly, \"You're all so slow! I have time to give my snake feet too.\""
+            },
+            {
+                "han": "他正在画蛇脚的时候，另一个人画完了，把酒拿过去，说：\"蛇本来没有脚，你画的不是蛇了。\"",
+                "pinyin": "Tā zhèngzài huà shé jiǎo de shíhou, lìng yī gè rén huà wán le, bǎ jiǔ ná guòqù, shuō: \"Shé běnlái méi yǒu jiǎo, nǐ huà de bú shì shé le.\"",
+                "en": "While he was drawing the feet, another man finished, took the wine, and said, \"Snakes don't have feet — what you've drawn isn't a snake anymore.\""
+            },
+            {
+                "han": "第一个人就这样失去了酒。",
+                "pinyin": "Dì yī gè rén jiù zhèyàng shīqù le jiǔ.",
+                "en": "And so the first man lost the wine."
+            }
+        ],
+        "moral": {
+            "han": "做事过头，反而把好事变成坏事。",
+            "pinyin": "Zuò shì guòtóu, fǎn'ér bǎ hǎo shì biàn chéng huài shì.",
+            "en": "Overdoing something turns a win into a loss — gilding the lily."
+        }
+    },
+    {
+        "id": 3,
+        "title_han": "亡羊补牢",
+        "title_pinyin": "Wáng yáng bǔ láo",
+        "title_en": "Mending the Pen After the Sheep Are Gone",
+        "youtube_id": "jAx04A2X1ag",
+        "youtube_label": "LingoAce · animated story",
+        "body": [
+            {
+                "han": "从前有个人，养了一群羊。",
+                "pinyin": "Cóngqián yǒu gè rén, yǎng le yī qún yáng.",
+                "en": "Once there was a man who kept a flock of sheep."
+            },
+            {
+                "han": "一天早上，他发现羊圈有一个洞，少了一只羊。",
+                "pinyin": "Yī tiān zǎoshang, tā fāxiàn yáng juàn yǒu yī gè dòng, shǎo le yī zhī yáng.",
+                "en": "One morning he noticed a hole in the pen and that one sheep was missing."
+            },
+            {
+                "han": "邻居说：\"你快把洞补好吧。\"他却说：\"羊已经丢了，补也没用。\"",
+                "pinyin": "Línjū shuō: \"Nǐ kuài bǎ dòng bǔ hǎo ba.\" Tā què shuō: \"Yáng yǐjīng diū le, bǔ yě méi yòng.\"",
+                "en": "A neighbor said, \"Hurry up and fix the hole.\" But he replied, \"The sheep is already gone — fixing it is no use.\""
+            },
+            {
+                "han": "第二天，又少了一只羊。",
+                "pinyin": "Dì èr tiān, yòu shǎo le yī zhī yáng.",
+                "en": "The next day, another sheep was missing."
+            },
+            {
+                "han": "他后悔了，赶紧把洞补好。从那以后，他的羊再也没有丢过。",
+                "pinyin": "Tā hòuhuǐ le, gǎnjǐn bǎ dòng bǔ hǎo. Cóng nà yǐhòu, tā de yáng zài yě méi yǒu diū guò.",
+                "en": "He regretted it and quickly mended the hole. From then on, no more sheep were lost."
+            }
+        ],
+        "moral": {
+            "han": "知道错了就改，永远不晚。",
+            "pinyin": "Zhīdào cuò le jiù gǎi, yǒngyuǎn bù wǎn.",
+            "en": "When you realize a mistake, fix it. It's never too late."
+        }
+    },
+    {
+        "id": 4,
+        "title_han": "塞翁失马",
+        "title_pinyin": "Sài wēng shī mǎ",
+        "title_en": "The Old Man and the Lost Horse",
+        "youtube_id": "3kWLqOmIFFM",
+        "youtube_label": "LingoAce · animated story",
+        "body": [
+            {
+                "han": "边塞有一个老人，养了一匹好马。",
+                "pinyin": "Biānsài yǒu yī gè lǎorén, yǎng le yī pǐ hǎo mǎ.",
+                "en": "At the frontier lived an old man who kept a fine horse."
+            },
+            {
+                "han": "有一天，马跑丢了。邻居们都来安慰他，他却说：\"这不一定是坏事。\"",
+                "pinyin": "Yǒu yī tiān, mǎ pǎo diū le. Línjū men dōu lái ānwèi tā, tā què shuō: \"Zhè bù yīdìng shì huài shì.\"",
+                "en": "One day the horse ran away. The neighbors came to console him, but he said, \"This isn't necessarily bad.\""
+            },
+            {
+                "han": "过了几个月，那匹马回来了，还带回了一匹野马。邻居们都来祝贺，他却说：\"这不一定是好事。\"",
+                "pinyin": "Guò le jǐ gè yuè, nà pǐ mǎ huí lái le, hái dài huí le yī pǐ yěmǎ. Línjū men dōu lái zhùhè, tā què shuō: \"Zhè bù yīdìng shì hǎo shì.\"",
+                "en": "A few months later the horse came back, and brought a wild horse with it. The neighbors came to congratulate him, but he said, \"This isn't necessarily good.\""
+            },
+            {
+                "han": "老人的儿子骑那匹野马，摔断了腿。邻居们又来安慰，他说：\"这不一定是坏事。\"",
+                "pinyin": "Lǎorén de érzi qí nà pǐ yěmǎ, shuāi duàn le tuǐ. Línjū men yòu lái ānwèi, tā shuō: \"Zhè bù yīdìng shì huài shì.\"",
+                "en": "The old man's son rode the wild horse and broke his leg. The neighbors came to console him again, and he said, \"This isn't necessarily bad.\""
+            },
+            {
+                "han": "不久，国家打仗，年轻人都被征兵，大多数都死了。老人的儿子因为腿伤，没有去打仗，活了下来。",
+                "pinyin": "Bùjiǔ, guójiā dǎzhàng, niánqīng rén dōu bèi zhēngbīng, dà duōshù dōu sǐ le. Lǎorén de érzi yīnwèi tuǐ shāng, méi yǒu qù dǎzhàng, huó le xiàlái.",
+                "en": "Soon after, war broke out. Young men were drafted, and most of them died. Because of his broken leg, the old man's son didn't go, and he survived."
+            }
+        ],
+        "moral": {
+            "han": "好事坏事，常常会变。",
+            "pinyin": "Hǎo shì huài shì, chángcháng huì biàn.",
+            "en": "Good fortune and bad often turn into each other."
+        }
+    }
+];
+
+        const spotifyPlaylistId = "6TZP72K8V8hrcSMWbz7LGw";
         const toneColors = {
             1: 'tone-1',
             2: 'tone-2',
@@ -1454,7 +2432,9 @@
 
         let currentPairIndex = 0;
         let currentMode = 'base'; // 'base' or 'contrast'
-        let appMode = 'study';    // 'study' or 'test'
+        let appMode = 'study';    // 'study' | 'test' | 'phrases' | 'chart' | 'stories' | 'songs'
+        let currentPhraseIndex = 0;
+        let currentStoryIndex = 0;
 
         // Test-mode state
         let testQuestion = null;  // { pairIndex, isBase, choices: [{isBase:bool}, {isBase:bool}], correctIdx, audioSrc }
@@ -1463,17 +2443,118 @@
 
         function setAppMode(mode) {
             appMode = mode;
-            document.body.classList.toggle('study-mode', mode === 'study');
-            document.body.classList.toggle('test-mode',  mode === 'test');
+            document.body.classList.toggle('study-mode',   mode === 'study');
+            document.body.classList.toggle('test-mode',    mode === 'test');
+            document.body.classList.toggle('phrases-mode', mode === 'phrases');
+            document.body.classList.toggle('chart-mode',   mode === 'chart');
+            document.body.classList.toggle('stories-mode', mode === 'stories');
+            document.body.classList.toggle('songs-mode',   mode === 'songs');
             document.querySelectorAll('.app-mode-btn').forEach(b => b.classList.remove('active'));
             document.querySelector(`.app-mode-btn[onclick="setAppMode('${mode}')"]`).classList.add('active');
 
+            // Audio buttons are speakers in study/test, single play button in phrases
+            document.getElementById('audioBtn1').textContent =
+                mode === 'phrases' ? '🎧 Play' : '🎤 Speaker 1';
+            document.getElementById('audioBtn2').textContent = '🎤 Speaker 2';
+
+            // Stop any audio that's playing when leaving study/test/phrases
+            const existingAudio = document.querySelector('audio');
+            if (existingAudio) { existingAudio.pause(); existingAudio.remove(); }
+
+            // Pause YouTube embed when leaving stories mode
+            if (mode !== 'stories') {
+                const video = document.getElementById('storyVideo');
+                if (video && video.src) video.src = '';
+            }
+
             if (mode === 'test') {
                 newTestQuestion();
+            } else if (mode === 'phrases') {
+                clearChoiceState();
+                updatePhrase();
+            } else if (mode === 'chart') {
+                clearChoiceState();
+                clearChartHighlight();
+            } else if (mode === 'stories') {
+                clearChoiceState();
+                updateStory();
+            } else if (mode === 'songs') {
+                clearChoiceState();
+                loadSpotifyEmbed();
             } else {
                 clearChoiceState();
                 updateCard();
             }
+        }
+
+        // Lazy-load the Spotify iframe only when user opens the Songs tab
+        let spotifyLoaded = false;
+        function loadSpotifyEmbed() {
+            if (spotifyLoaded) return;
+            const iframe = document.getElementById('spotifyEmbed');
+            iframe.src = `https://open.spotify.com/embed/playlist/${spotifyPlaylistId}?theme=0`;
+            spotifyLoaded = true;
+        }
+
+        function updateStory() {
+            const s = storyData[currentStoryIndex];
+            document.getElementById('storyCounter').textContent       = `Story ${s.id} / ${storyData.length}`;
+            document.getElementById('storyCounterBottom').textContent = `${s.id} / ${storyData.length}`;
+            document.getElementById('storyTitleHan').textContent      = s.title_han;
+            document.getElementById('storyTitlePinyin').textContent   = s.title_pinyin;
+            document.getElementById('storyTitleEn').textContent       = s.title_en;
+
+            // Lazy-load the YouTube iframe with the story's video
+            const video = document.getElementById('storyVideo');
+            video.src = `https://www.youtube-nocookie.com/embed/${s.youtube_id}?rel=0`;
+
+            // Render sentences
+            const body = document.getElementById('storyBody');
+            body.innerHTML = '';
+            for (const sent of s.body) {
+                const div = document.createElement('div');
+                div.className = 'story-sentence';
+                div.innerHTML =
+                    `<div class="han">${sent.han}</div>` +
+                    `<div class="pinyin">${sent.pinyin}</div>` +
+                    `<div class="en">${sent.en}</div>`;
+                body.appendChild(div);
+            }
+
+            // Render moral
+            const moral = document.getElementById('storyMoral');
+            moral.querySelector('.han').textContent    = s.moral.han;
+            moral.querySelector('.pinyin').textContent = s.moral.pinyin;
+            moral.querySelector('.en').textContent     = s.moral.en;
+        }
+
+        function nextStory() {
+            currentStoryIndex = (currentStoryIndex + 1) % storyData.length;
+            updateStory();
+        }
+        function prevStory() {
+            currentStoryIndex = (currentStoryIndex - 1 + storyData.length) % storyData.length;
+            updateStory();
+        }
+
+        function clearChartHighlight() {
+            document.querySelectorAll('.tone-curve.playing, .tone-info-card.playing')
+                .forEach(el => el.classList.remove('playing'));
+        }
+
+        function playChartTone(tone) {
+            const t = chartTones.find(c => c.tone === tone);
+            if (!t) return;
+            clearChartHighlight();
+            document.querySelector(`.tone-curve[data-tone="${tone}"]`)?.classList.add('playing');
+            document.querySelector(`.tone-info-card[data-tone="${tone}"]`)?.classList.add('playing');
+
+            const existingAudio = document.querySelector('audio');
+            if (existingAudio) { existingAudio.pause(); existingAudio.remove(); }
+            const audio = new Audio(t.audio);
+            audio.play().catch(() => {});
+            audio.onended = () => clearChartHighlight();
+            audio.onerror = () => clearChartHighlight();
         }
 
         function updateCard() {
@@ -1554,6 +2635,11 @@
                 newTestQuestion();
                 return;
             }
+            if (appMode === 'phrases') {
+                currentPhraseIndex = (currentPhraseIndex + 1) % phraseData.length;
+                updatePhrase();
+                return;
+            }
             if (currentMode === 'base') {
                 currentMode = 'contrast';
                 document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -1573,6 +2659,11 @@
 
         function prevCard() {
             if (appMode === 'test') return; // no rewind in test mode
+            if (appMode === 'phrases') {
+                currentPhraseIndex = (currentPhraseIndex - 1 + phraseData.length) % phraseData.length;
+                updatePhrase();
+                return;
+            }
             if (currentMode === 'contrast') {
                 currentMode = 'base';
                 document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -1588,6 +2679,16 @@
                 }
             }
             updateCard();
+        }
+
+        function updatePhrase() {
+            const p = phraseData[currentPhraseIndex];
+            document.getElementById('charDisplay').textContent    = p.text;
+            document.getElementById('pinyinDisplay').textContent  = p.pinyin;
+            document.getElementById('meaningDisplay').textContent = p.meaning;
+            document.getElementById('pairNumber').textContent     = `Phrase ${p.id} / ${phraseData.length}`;
+            document.getElementById('audioBtn1').dataset.audioSrc = p.audio;
+            document.getElementById('counter').textContent        = `${p.id} / ${phraseData.length}`;
         }
 
         function updateButtons() {
@@ -1697,25 +2798,42 @@
 
         // Keyboard navigation
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowRight') nextCard();
             if (appMode === 'study') {
+                if (e.key === 'ArrowRight') nextCard();
                 if (e.key === 'ArrowLeft') prevCard();
                 if (e.key === '1') playAudio('audio1');
                 if (e.key === '2') playAudio('audio2');
                 if (e.key === 'b') { currentMode = 'base'; updateCard(); }
                 if (e.key === 'c') { currentMode = 'contrast'; updateCard(); }
-            } else {
+            } else if (appMode === 'phrases') {
+                if (e.key === 'ArrowRight') nextCard();
+                if (e.key === 'ArrowLeft') prevCard();
+                if (e.key === '1' || e.key === ' ' || e.key === 'r') {
+                    e.preventDefault();
+                    playAudio('audio1');
+                }
+            } else if (appMode === 'test') {
+                if (e.key === 'ArrowRight') nextCard();
                 if (e.key === '1') answerTest(0);
                 if (e.key === '2') answerTest(1);
                 if (e.key === 'r' && testQuestion) playAudioSrc(testQuestion.audioSrc);
+            } else if (appMode === 'stories') {
+                if (e.key === 'ArrowRight') nextStory();
+                if (e.key === 'ArrowLeft') prevStory();
             }
         });
 
         // Initialize
         document.body.classList.add('study-mode');
-        document.getElementById('subtitle').textContent =
-            `${flashcardData.length} Words · ${flashcardData.length * 2} Meanings · 2 Speakers`;
         updateCard();
+
+        // Wire chart click-to-play (curves and info cards)
+        document.querySelectorAll('[data-tone]').forEach(el => {
+            el.addEventListener('click', () => {
+                const tone = parseInt(el.dataset.tone, 10);
+                if (tone >= 1 && tone <= 4) playChartTone(tone);
+            });
+        });
     </script>
 
 </body>
