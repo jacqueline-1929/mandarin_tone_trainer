@@ -2,7 +2,7 @@
 
 > Tone training for ears that grew up without tones.
 
-By **Jackie Carter**, co-authored with **Claude** (AI pair programmer).
+By **Jackie Carter**.
 Code released under the MIT License — see [LICENSE](LICENSE). Audio and embedded media remain under the licenses of their original sources (see Acknowledgments).
 
 A single-page flashcard app for training Mandarin tone perception. Each card pairs a high-frequency monosyllabic word with a tone-minimal-pair contrast (same syllable, different tone) so you train the perceptual category — not just the word.
