@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+._.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.claude/
+
+# Logs / temp
+*.log
+*.tmp
+.cache/

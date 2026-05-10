@@ -30,7 +30,7 @@ INDEX_HTML = ROOT / "index.html"
 TONE_PERFECT_BASE = "https://tone.lib.msu.edu"
 TATOEBA_AUDIO_BASE = "https://tatoeba.org/en/audio/download"
 SPEAKERS = ("FV1", "MV1")
-HEADERS = {"User-Agent": "Mozilla/5.0 (mandapanda flashcard builder)"}
+HEADERS = {"User-Agent": "Mozilla/5.0 (tonely flashcard builder)"}
 
 # (id, base_char, base_pinyin, base_syl, base_tone, base_meaning,
 #      contrast_char, contrast_pinyin, contrast_syl, contrast_tone, contrast_meaning)

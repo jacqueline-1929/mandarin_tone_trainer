@@ -1,8 +1,9 @@
-# 🎵 Tonely
+# Tonely
 
 > Tone training for ears that grew up without tones.
 
-(Repo name: `mandapanda` — internal handle.)
+By **Jackie Carter**, co-authored with **Claude** (AI pair programmer).
+Code released under the MIT License — see [LICENSE](LICENSE). Audio and embedded media remain under the licenses of their original sources (see Acknowledgments).
 
 A single-page flashcard app for training Mandarin tone perception. Each card pairs a high-frequency monosyllabic word with a tone-minimal-pair contrast (same syllable, different tone) so you train the perceptual category — not just the word.
 
@@ -51,7 +52,7 @@ The script is idempotent: existing audio files are skipped on re-runs.
 
 The human-readable word list lives in [50_words.md](50_words.md). To find new candidate phrases that use the existing word bank, see the curation notes in `build.py`'s `PHRASES` block — the candidates were drawn from Tatoeba's bulk Mandarin corpus filtered for sentences with audio that maximize bank-character coverage.
 
-## Attribution
+## Acknowledgments
 
 **Word audio — Tone Perfect** (MSU Libraries):
 
@@ -74,12 +75,11 @@ A free, open-access corpus of 9,840 audio recordings covering all 410 standard M
 ## Project layout
 
 ```
-mandapanda/
+tonely/
 ├── index.html         # the app (HTML + CSS + JS + flashcardData + phraseData inline)
 ├── 50_words.md        # human-readable word list with pairs
 ├── build.py           # word/phrase source-of-truth + audio fetcher + index.html patcher
-├── audio/             # 258 word MP3s (FV1 + MV1 for each of 129 unique syllable-tone combos)
-│   └── phrases/       # 40 phrase MP3s (Tatoeba audio_id-named)
+├── audio/             # word MP3s (FV1 + MV1 per syllable-tone) + phrases/ + ma1-4 (chart)
 └── README.md
 ```
 
