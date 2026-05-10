@@ -3269,11 +3269,11 @@
             const pair = flashcardData[pairIdx];
 
             const correct = isBase
-                ? { char: pair.charBase,     pinyin: pair.pinyinBase,     meaning: pair.meaningBase }
-                : { char: pair.charContrast, pinyin: pair.pinyinContrast, meaning: pair.meaningContrast };
+                ? { char: pair.charBase,     pinyin: pair.pinyinBase,     meaning: pair.meaningBase,     audio: pair.audioBase1 }
+                : { char: pair.charContrast, pinyin: pair.pinyinContrast, meaning: pair.meaningContrast, audio: pair.audioContrast1 };
             const partner = isBase
-                ? { char: pair.charContrast, pinyin: pair.pinyinContrast, meaning: pair.meaningContrast }
-                : { char: pair.charBase,     pinyin: pair.pinyinBase,     meaning: pair.meaningBase };
+                ? { char: pair.charContrast, pinyin: pair.pinyinContrast, meaning: pair.meaningContrast, audio: pair.audioContrast1 }
+                : { char: pair.charBase,     pinyin: pair.pinyinBase,     meaning: pair.meaningBase,     audio: pair.audioBase1 };
 
             // Pick 2 random distractors from other pairs (different syllable)
             const distractors = [];
@@ -3321,6 +3321,11 @@
             for (let i = 0; i < 4; i++) document.getElementById('vocabChoice' + i).disabled = true;
 
             updateVocabScoreDisplay();
+
+            // Play the correct word's audio so meaning ↔ sound association lands
+            if (vocabQuestion.correct.audio) {
+                playAudioSrc(vocabQuestion.correct.audio);
+            }
         }
 
         function updateVocabScoreDisplay() {
