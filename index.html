@@ -2633,8 +2633,7 @@
             document.getElementById('audioBtn2').textContent = '🎤 Speaker 2';
 
             // Stop any audio that's playing when leaving study/test/phrases
-            const existingAudio = document.querySelector('audio');
-            if (existingAudio) { existingAudio.pause(); existingAudio.remove(); }
+            stopCurrentAudio();
 
             // Pause YouTube embed when leaving stories mode
             if (mode !== 'stories') {
@@ -2724,12 +2723,19 @@
             document.querySelector(`.tone-curve[data-tone="${tone}"]`)?.classList.add('playing');
             document.querySelector(`.tone-info-card[data-tone="${tone}"]`)?.classList.add('playing');
 
-            const existingAudio = document.querySelector('audio');
-            if (existingAudio) { existingAudio.pause(); existingAudio.remove(); }
+            stopCurrentAudio();
             const audio = new Audio(t.audio);
-            audio.play().catch(() => {});
-            audio.onended = () => clearChartHighlight();
-            audio.onerror = () => clearChartHighlight();
+            currentAudio = audio;
+            audio.play().catch(err => console.warn('Audio play interrupted:', err.name));
+            audio.onended = () => {
+                clearChartHighlight();
+                if (currentAudio === audio) currentAudio = null;
+            };
+            audio.onerror = () => {
+                clearChartHighlight();
+                if (currentAudio === audio) currentAudio = null;
+                console.warn('Audio load failed:', t.audio);
+            };
         }
 
         function updateCard() {
@@ -2764,37 +2770,43 @@
             updateButtons();
         }
 
+        // Tracks the currently playing Audio object so we can stop it cleanly.
+        // (new Audio() doesn't add to the DOM, so document.querySelector('audio')
+        // never finds these — we have to hold our own reference.)
+        let currentAudio = null;
+
+        function stopCurrentAudio() {
+            if (currentAudio) {
+                try { currentAudio.pause(); } catch (e) {}
+                currentAudio = null;
+            }
+            document.getElementById('audioBtn1').classList.remove('playing');
+            document.getElementById('audioBtn2').classList.remove('playing');
+        }
+
         function playAudio(which) {
             const btn = which === 'audio1' ? document.getElementById('audioBtn1') : document.getElementById('audioBtn2');
             const audioSrc = btn.dataset.audioSrc;
-
             if (!audioSrc || audioSrc === 'AUDIO_URL_HERE') {
-                alert('Audio file not yet linked! Add your audio URLs to the flashcardData array.');
+                console.warn('No audio source set for', which);
                 return;
             }
 
-            // Stop any currently playing audio
-            const existingAudio = document.querySelector('audio');
-            if (existingAudio) {
-                existingAudio.pause();
-                existingAudio.remove();
-            }
-
-            // Remove playing class from both buttons
-            document.getElementById('audioBtn1').classList.remove('playing');
-            document.getElementById('audioBtn2').classList.remove('playing');
+            stopCurrentAudio();
 
             const audio = new Audio(audioSrc);
-            audio.play();
+            currentAudio = audio;
+            audio.play().catch(err => console.warn('Audio play interrupted:', err.name));
             btn.classList.add('playing');
 
             audio.onended = () => {
                 btn.classList.remove('playing');
+                if (currentAudio === audio) currentAudio = null;
             };
-
             audio.onerror = () => {
                 btn.classList.remove('playing');
-                alert('Could not load audio file. Check the file path.');
+                if (currentAudio === audio) currentAudio = null;
+                console.warn('Audio load failed:', audioSrc);
             };
         }
 
@@ -2955,20 +2967,25 @@
 
         // Lower-level audio play that takes a src directly (used by test mode)
         function playAudioSrc(audioSrc, btnKey) {
-            const existingAudio = document.querySelector('audio');
-            if (existingAudio) { existingAudio.pause(); existingAudio.remove(); }
-            document.getElementById('audioBtn1').classList.remove('playing');
-            document.getElementById('audioBtn2').classList.remove('playing');
+            stopCurrentAudio();
 
             const audio = new Audio(audioSrc);
+            currentAudio = audio;
             const btn = btnKey ? document.getElementById(btnKey === 'audio1' ? 'audioBtn1' : 'audioBtn2') : null;
-            const playPromise = audio.play();
+            audio.play().catch(err => {
+                if (btn) btn.classList.remove('playing');
+                console.warn('Audio play interrupted:', err.name);
+            });
             if (btn) btn.classList.add('playing');
-            if (playPromise && playPromise.catch) {
-                playPromise.catch(() => { if (btn) btn.classList.remove('playing'); });
-            }
-            audio.onended = () => { if (btn) btn.classList.remove('playing'); };
-            audio.onerror = () => { if (btn) btn.classList.remove('playing'); };
+            audio.onended = () => {
+                if (btn) btn.classList.remove('playing');
+                if (currentAudio === audio) currentAudio = null;
+            };
+            audio.onerror = () => {
+                if (btn) btn.classList.remove('playing');
+                if (currentAudio === audio) currentAudio = null;
+                console.warn('Audio load failed:', audioSrc);
+            };
         }
 
         // Keyboard navigation
