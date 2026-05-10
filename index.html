@@ -447,6 +447,104 @@
         }
         body:not(.chart-mode) .chart-only { display: none; }
 
+        /* Vocab mode: hide flashcard, nav, test/study controls */
+        body.vocab-mode .study-only,
+        body.vocab-mode .test-only,
+        body.vocab-mode .card-container,
+        body.vocab-mode .nav-buttons {
+            display: none !important;
+        }
+        body:not(.vocab-mode) .vocab-only { display: none; }
+
+        .vocab-container {
+            background: linear-gradient(145deg, #1e2a4a, #1a2140);
+            border: 2px solid #2a3a6a;
+            border-radius: 20px;
+            padding: 32px 30px 24px;
+            max-width: 540px;
+            width: 100%;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            margin-bottom: 16px;
+        }
+        .vocab-instruction {
+            color: #6c6c80;
+            font-size: 0.78em;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .vocab-meaning {
+            color: #ffffff;
+            font-size: 2.1em;
+            text-align: center;
+            line-height: 1.3;
+            font-weight: 400;
+            padding: 10px 8px 26px;
+            border-bottom: 1px solid #2a3a6a;
+            margin-bottom: 24px;
+            font-style: italic;
+        }
+        .vocab-choices {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .vocab-choice-btn {
+            background: linear-gradient(145deg, #2a3a6a, #1e2a4e);
+            border: 1px solid #3a4a7a;
+            border-radius: 14px;
+            padding: 18px 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
+            min-height: 100px;
+        }
+        .vocab-choice-btn:hover:not(:disabled) {
+            border-color: #d4af37;
+            transform: translateY(-2px);
+            box-shadow: 0 0 24px rgba(212, 175, 55, 0.18);
+        }
+        .vocab-choice-btn:disabled { cursor: default; }
+        .vocab-choice-btn .choice-char {
+            font-size: 2.2em;
+            color: #ffffff;
+            line-height: 1;
+        }
+        .vocab-choice-btn .choice-pinyin {
+            font-size: 1em;
+            color: #c0c8e0;
+            letter-spacing: 1px;
+        }
+        .vocab-choice-btn.correct {
+            border-color: #d4af37;
+            background: linear-gradient(145deg, #5a4720, #3a2c14);
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.45);
+        }
+        .vocab-choice-btn.wrong {
+            border-color: #e94560;
+            background: linear-gradient(145deg, #6b1f2e, #3e1018);
+            box-shadow: 0 0 28px rgba(233, 69, 96, 0.4);
+        }
+        .vocab-footer {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+        }
+        .vocab-score {
+            color: #a0a8c0;
+            font-size: 0.95em;
+            letter-spacing: 1px;
+        }
+        .vocab-score .correct-count { color: #d4af37; font-weight: bold; }
+        .vocab-score .pct { color: #6c6c80; margin-left: 6px; font-size: 0.85em; }
+
         .chart-container {
             background: linear-gradient(145deg, #1e2a4a, #1a2140);
             border: 2px solid #2a3a6a;
@@ -895,6 +993,7 @@
         <nav class="sidebar-menu">
             <button class="sidebar-item active" onclick="setAppMode('study')">Study</button>
             <button class="sidebar-item" onclick="setAppMode('test')">Test</button>
+            <button class="sidebar-item" onclick="setAppMode('vocab')">Vocab</button>
             <button class="sidebar-item" onclick="setAppMode('phrases')">Phrases</button>
             <button class="sidebar-item" onclick="setAppMode('chart')">Chart</button>
             <button class="sidebar-item" onclick="setAppMode('stories')">Stories</button>
@@ -1019,6 +1118,36 @@
         <p class="chart-note">
             Pitch is shown on a relative <strong>5-level scale</strong> (Chao 1948): <strong>1 = lowest</strong>, <strong>5 = highest</strong>. Click any tone to hear an example. Contours: <strong>1</strong> high level (5–5), <strong>2</strong> rising (3–5), <strong>3</strong> dipping (2–1–4), <strong>4</strong> falling (5–1). The <strong>neutral tone</strong> is short and unstressed; its pitch shifts depending on the previous tone (often around level 2 after tone 1, lower after tone 4).
         </p>
+    </div>
+
+    <div class="vocab-container vocab-only">
+        <div class="vocab-instruction" id="vocabInstruction">Pick the Chinese word that means…</div>
+        <div class="vocab-meaning" id="vocabMeaning">…</div>
+        <div class="vocab-choices">
+            <button class="vocab-choice-btn" id="vocabChoice0" onclick="answerVocab(0)">
+                <span class="choice-char"></span>
+                <span class="choice-pinyin"></span>
+            </button>
+            <button class="vocab-choice-btn" id="vocabChoice1" onclick="answerVocab(1)">
+                <span class="choice-char"></span>
+                <span class="choice-pinyin"></span>
+            </button>
+            <button class="vocab-choice-btn" id="vocabChoice2" onclick="answerVocab(2)">
+                <span class="choice-char"></span>
+                <span class="choice-pinyin"></span>
+            </button>
+            <button class="vocab-choice-btn" id="vocabChoice3" onclick="answerVocab(3)">
+                <span class="choice-char"></span>
+                <span class="choice-pinyin"></span>
+            </button>
+        </div>
+        <div class="vocab-footer">
+            <span class="vocab-score" id="vocabScore">
+                <span class="correct-count">0</span> / <span class="total-count">0</span>
+                <span class="pct"></span>
+            </span>
+            <button class="nav-btn" onclick="newVocabQuestion()">Next ▶</button>
+        </div>
     </div>
 
     <div class="songs-container songs-only">
@@ -2733,6 +2862,11 @@
         let testAnswered = false;
         let testScore = { correct: 0, total: 0 };
 
+        // Vocab-mode state
+        let vocabQuestion = null;  // { correctIdx, choices: [{char, pinyin, meaning}, x4] }
+        let vocabAnswered = false;
+        let vocabScore = { correct: 0, total: 0 };
+
         // ===== Sidebar drawer =====
         function toggleMenu() {
             const open = !document.body.classList.contains('menu-open');
@@ -2761,6 +2895,7 @@
             document.body.classList.toggle('chart-mode',   mode === 'chart');
             document.body.classList.toggle('stories-mode', mode === 'stories');
             document.body.classList.toggle('songs-mode',   mode === 'songs');
+            document.body.classList.toggle('vocab-mode',   mode === 'vocab');
             document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
             document.querySelector(`.sidebar-item[onclick="setAppMode('${mode}')"]`).classList.add('active');
             closeMenu();
@@ -2793,6 +2928,9 @@
             } else if (mode === 'songs') {
                 clearChoiceState();
                 loadSpotifyEmbed();
+            } else if (mode === 'vocab') {
+                clearChoiceState();
+                newVocabQuestion();
             } else {
                 clearChoiceState();
                 updateCard();
@@ -3103,6 +3241,96 @@
             el.querySelector('.pct').textContent = pct;
         }
 
+        // ===== Vocab mode =====
+
+        function clearVocabChoiceState() {
+            for (let i = 0; i < 4; i++) {
+                const btn = document.getElementById('vocabChoice' + i);
+                btn.classList.remove('correct', 'wrong');
+                btn.disabled = false;
+            }
+        }
+
+        function shuffleArray(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // Build a vocab question: 1 correct + 1 tone-pair partner + 2 random distractors
+        function newVocabQuestion() {
+            vocabAnswered = false;
+            clearVocabChoiceState();
+
+            const pairIdx = Math.floor(Math.random() * flashcardData.length);
+            const isBase = Math.random() < 0.5;
+            const pair = flashcardData[pairIdx];
+
+            const correct = isBase
+                ? { char: pair.charBase,     pinyin: pair.pinyinBase,     meaning: pair.meaningBase }
+                : { char: pair.charContrast, pinyin: pair.pinyinContrast, meaning: pair.meaningContrast };
+            const partner = isBase
+                ? { char: pair.charContrast, pinyin: pair.pinyinContrast, meaning: pair.meaningContrast }
+                : { char: pair.charBase,     pinyin: pair.pinyinBase,     meaning: pair.meaningBase };
+
+            // Pick 2 random distractors from other pairs (different syllable)
+            const distractors = [];
+            const usedChars = new Set([correct.char, partner.char]);
+            let safety = 0;
+            while (distractors.length < 2 && safety++ < 100) {
+                const otherIdx = Math.floor(Math.random() * flashcardData.length);
+                if (otherIdx === pairIdx) continue;
+                const other = flashcardData[otherIdx];
+                const useBase = Math.random() < 0.5;
+                const cand = useBase
+                    ? { char: other.charBase,     pinyin: other.pinyinBase,     meaning: other.meaningBase }
+                    : { char: other.charContrast, pinyin: other.pinyinContrast, meaning: other.meaningContrast };
+                if (usedChars.has(cand.char)) continue;
+                usedChars.add(cand.char);
+                distractors.push(cand);
+            }
+
+            const choices = shuffleArray([correct, partner, ...distractors]);
+            const correctIdx = choices.findIndex(c => c.char === correct.char && c.pinyin === correct.pinyin);
+            vocabQuestion = { choices, correctIdx, correct };
+
+            // Render
+            document.getElementById('vocabMeaning').textContent = `"${correct.meaning}"`;
+            for (let i = 0; i < 4; i++) {
+                const btn = document.getElementById('vocabChoice' + i);
+                btn.querySelector('.choice-char').textContent   = choices[i].char;
+                btn.querySelector('.choice-pinyin').textContent = choices[i].pinyin;
+            }
+            updateVocabScoreDisplay();
+        }
+
+        function answerVocab(pickedIdx) {
+            if (!vocabQuestion || vocabAnswered) return;
+            vocabAnswered = true;
+
+            const correct = pickedIdx === vocabQuestion.correctIdx;
+            vocabScore.total += 1;
+            if (correct) vocabScore.correct += 1;
+
+            const correctBtn = document.getElementById('vocabChoice' + vocabQuestion.correctIdx);
+            const pickedBtn  = document.getElementById('vocabChoice' + pickedIdx);
+            correctBtn.classList.add('correct');
+            if (!correct) pickedBtn.classList.add('wrong');
+            for (let i = 0; i < 4; i++) document.getElementById('vocabChoice' + i).disabled = true;
+
+            updateVocabScoreDisplay();
+        }
+
+        function updateVocabScoreDisplay() {
+            const el = document.getElementById('vocabScore');
+            el.querySelector('.correct-count').textContent = vocabScore.correct;
+            el.querySelector('.total-count').textContent   = vocabScore.total;
+            const pct = vocabScore.total === 0 ? '' : ` (${Math.round(100 * vocabScore.correct / vocabScore.total)}%)`;
+            el.querySelector('.pct').textContent = pct;
+        }
+
         // Lower-level audio play that takes a src directly (used by test mode)
         function playAudioSrc(audioSrc, btnKey) {
             stopCurrentAudio();
@@ -3151,6 +3379,9 @@
             } else if (appMode === 'stories') {
                 if (e.key === 'ArrowRight') nextStory();
                 if (e.key === 'ArrowLeft') prevStory();
+            } else if (appMode === 'vocab') {
+                if (e.key === 'ArrowRight') newVocabQuestion();
+                if (['1','2','3','4'].includes(e.key)) answerVocab(parseInt(e.key, 10) - 1);
             }
         });
 

@@ -9,6 +9,7 @@ A single-page flashcard app for training Mandarin tone perception. Each card pai
 
 - **Study mode** — flip through 65 base/contrast pairs, see the character + pinyin + meaning, hear two native speakers pronounce each.
 - **Test mode** — audio plays a randomly chosen word, you pick which of the two pair members you heard. 2-AFC tone discrimination, score tracked.
+- **Vocab mode** — see an English meaning, pick the matching Chinese character + pinyin from 4 choices. One distractor is always the tone-pair partner (same syllable, wrong tone) so meaning *and* tone both have to be right.
 - **Phrases mode** — 40 short conversational sentences from native-speaker recordings, mostly built from words in the deck. Hear bank words used in real speech, with sentence-level prosody and tone sandhi.
 - **Chart mode** — Reference: the four tones plotted on a Chao 5-level pitch chart (high-level, rising, dipping, falling) plus the neutral tone. Click any tone to hear the canonical mā/má/mǎ/mà example.
 - **Stories mode** — 4 classic Chinese chengyu (idiom origin tales): 守株待兔, 画蛇添足, 亡羊补牢, 塞翁失马. Each shows the story sentence-by-sentence (character / pinyin / English) alongside an embedded YouTube video so you can listen while reading.
@@ -27,12 +28,13 @@ python3 -m http.server 8765
 
 ### Keyboard shortcuts
 
-| Key | Study | Test | Phrases | Chart | Stories | Songs |
-|-----|-------|------|---------|-------|---------|-------|
-| ← / → | prev / next | — / next q | prev / next | — | prev / next story | — |
-| 1 / 2 | play speaker 1 / 2 | pick choice 1 / 2 | play (1) | — | — | — |
-| space / r | — | replay (`r`) | play / replay | — | — | — |
-| b / c | base / contrast | — | — | — | — | — |
+| Key | Study | Test | Vocab | Phrases | Chart | Stories | Songs |
+|-----|-------|------|-------|---------|-------|---------|-------|
+| ← / → | prev / next | — / next q | — / next q | prev / next | — | prev / next story | — |
+| 1 / 2 | play speaker 1 / 2 | pick choice 1 / 2 | pick choice 1 / 2 | play (1) | — | — | — |
+| 3 / 4 | — | — | pick choice 3 / 4 | — | — | — | — |
+| space / r | — | replay (`r`) | — | play / replay | — | — | — |
+| b / c | base / contrast | — | — | — | — | — | — |
 
 In Chart mode, click any tone curve or info card to play its example. In Stories mode, the embedded YouTube player has its own controls.
 
