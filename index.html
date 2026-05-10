@@ -775,11 +775,45 @@
             text-transform: uppercase;
             margin-bottom: 8px;
         }
+        .story-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            margin-bottom: 4px;
+        }
         .story-title-han {
             font-size: 2em;
             color: #ffffff;
-            margin-bottom: 4px;
             line-height: 1.1;
+        }
+        .idiom-play-btn {
+            background: rgba(212, 175, 55, 0.08);
+            border: 1.5px solid #d4af37;
+            color: #d4af37;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            padding: 0;
+            flex-shrink: 0;
+        }
+        .idiom-play-btn:hover {
+            background: #d4af37;
+            color: #1a1a2e;
+            transform: scale(1.06);
+            box-shadow: 0 0 18px rgba(212, 175, 55, 0.4);
+        }
+        .idiom-play-btn.playing {
+            background: #d4af37;
+            color: #1a1a2e;
+            animation: pulse 0.8s ease infinite;
         }
         .story-title-pinyin {
             font-size: 1em;
@@ -835,18 +869,36 @@
         }
         .story-moral {
             margin-top: 18px;
-            padding: 14px;
-            background: rgba(233, 69, 96, 0.08);
-            border-left: 3px solid #e94560;
+            padding: 16px 18px;
+            background: #f8f5ec;
+            border-left: 3px solid #d4af37;
             border-radius: 10px;
+            color: #1a1a2e;
         }
         .story-moral .label {
-            color: #e94560;
+            color: #c8102e;
             font-weight: bold;
             font-size: 0.78em;
             letter-spacing: 2px;
             text-transform: uppercase;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
+        }
+        .story-moral .han {
+            color: #1a1a2e;
+            font-size: 1.05em;
+            line-height: 1.4;
+        }
+        .story-moral .pinyin {
+            color: #5a5a7a;
+            font-size: 0.92em;
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+        }
+        .story-moral .en {
+            color: #3a3a5a;
+            font-size: 0.88em;
+            font-style: italic;
+            margin-top: 4px;
         }
 
         .stories-nav {
@@ -1162,7 +1214,10 @@
     <div class="stories-container stories-only">
         <div class="story-header">
             <div class="story-counter" id="storyCounter">Story 1 / 4</div>
-            <div class="story-title-han"    id="storyTitleHan">…</div>
+            <div class="story-title-row">
+                <div class="story-title-han" id="storyTitleHan">…</div>
+                <button class="idiom-play-btn" id="idiomPlayBtn" onclick="playIdiomAudio()" aria-label="Play idiom">▶</button>
+            </div>
             <div class="story-title-pinyin" id="storyTitlePinyin">…</div>
             <div class="story-title-en"     id="storyTitleEn">…</div>
         </div>
@@ -2540,6 +2595,7 @@
         "title_en": "Waiting by the Stump",
         "youtube_id": "FVUgXgIEnSo",
         "youtube_label": "LingoAce · animated story",
+        "idiom_audio": "audio/idioms/shou_zhu_dai_tu.mp3",
         "body": [
             {
                 "han": "很久很久以前，有一个农夫在田里种地。",
@@ -2620,6 +2676,7 @@
         "title_en": "Drawing Legs on a Snake",
         "youtube_id": "Ll-n4rHfOyo",
         "youtube_label": "LingoAce · animated story",
+        "idiom_audio": "audio/idioms/hua_she_tian_zu.mp3",
         "body": [
             {
                 "han": "很久以前，有一户人家请了三个人帮忙做事。",
@@ -2700,6 +2757,7 @@
         "title_en": "Mending the Pen After the Sheep Are Gone",
         "youtube_id": "jAx04A2X1ag",
         "youtube_label": "LingoAce · animated story",
+        "idiom_audio": "audio/idioms/wang_yang_bu_lao.mp3",
         "body": [
             {
                 "han": "很久很久以前，有个人养了一群羊。",
@@ -2765,6 +2823,7 @@
         "title_en": "The Old Man and the Lost Horse",
         "youtube_id": "3kWLqOmIFFM",
         "youtube_label": "LingoAce · animated story",
+        "idiom_audio": "audio/idioms/sai_weng_shi_ma.mp3",
         "body": [
             {
                 "han": "在边塞地区，有一位被人们称为塞翁的老人。",
@@ -2976,6 +3035,34 @@
             moral.querySelector('.han').textContent    = s.moral.han;
             moral.querySelector('.pinyin').textContent = s.moral.pinyin;
             moral.querySelector('.en').textContent     = s.moral.en;
+
+            // Show/hide idiom play button based on whether this story has audio
+            const idiomBtn = document.getElementById('idiomPlayBtn');
+            idiomBtn.classList.remove('playing');
+            idiomBtn.style.display = s.idiom_audio ? 'inline-flex' : 'none';
+        }
+
+        function playIdiomAudio() {
+            const s = storyData[currentStoryIndex];
+            if (!s || !s.idiom_audio) return;
+            const btn = document.getElementById('idiomPlayBtn');
+            stopCurrentAudio();
+            const audio = new Audio(s.idiom_audio);
+            currentAudio = audio;
+            btn.classList.add('playing');
+            audio.play().catch(err => {
+                btn.classList.remove('playing');
+                console.warn('Idiom audio play interrupted:', err.name);
+            });
+            audio.onended = () => {
+                btn.classList.remove('playing');
+                if (currentAudio === audio) currentAudio = null;
+            };
+            audio.onerror = () => {
+                btn.classList.remove('playing');
+                if (currentAudio === audio) currentAudio = null;
+                console.warn('Idiom audio load failed:', s.idiom_audio);
+            };
         }
 
         function nextStory() {

@@ -284,6 +284,7 @@ STORIES = [
         "title_en":     "Waiting by the Stump",
         "youtube_id":   "FVUgXgIEnSo",
         "youtube_label":"LingoAce · animated story",
+        "idiom_audio": "audio/idioms/shou_zhu_dai_tu.mp3",
         "body": [
             {"han": "很久很久以前，有一个农夫在田里种地。",
              "pinyin": "Hěn jiǔ hěn jiǔ yǐ qián yǒu yí gè nóng fū zài tián lǐ zhòng dì",
@@ -336,6 +337,7 @@ STORIES = [
         "title_en":     "Drawing Legs on a Snake",
         "youtube_id":   "Ll-n4rHfOyo",
         "youtube_label":"LingoAce · animated story",
+        "idiom_audio": "audio/idioms/hua_she_tian_zu.mp3",
         "body": [
             {"han": "很久以前，有一户人家请了三个人帮忙做事。",
              "pinyin": "Hěn jiǔ yǐ qián yǒu yī hù rén jiā qǐng le sān gè rén bāng máng zuò shì",
@@ -388,6 +390,7 @@ STORIES = [
         "title_en":     "Mending the Pen After the Sheep Are Gone",
         "youtube_id":   "jAx04A2X1ag",
         "youtube_label":"LingoAce · animated story",
+        "idiom_audio": "audio/idioms/wang_yang_bu_lao.mp3",
         "body": [
             {"han": "很久很久以前，有个人养了一群羊。",
              "pinyin": "Hěn jiǔ hěn jiǔ yǐ qián yǒu gè rén yǎng le yī qún yáng",
@@ -431,6 +434,7 @@ STORIES = [
         "title_en":     "The Old Man and the Lost Horse",
         "youtube_id":   "3kWLqOmIFFM",
         "youtube_label":"LingoAce · animated story",
+        "idiom_audio": "audio/idioms/sai_weng_shi_ma.mp3",
         "body": [
             {"han": "在边塞地区，有一位被人们称为塞翁的老人。",
              "pinyin": "Zài biān sài dì qū yǒu yī wèi bèi rén men chēng wéi sāi wēng de lǎo rén",
