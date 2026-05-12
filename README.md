@@ -1,7 +1,7 @@
 # Tonely
 
 > Tone training for ears that grew up without tones.
-> wwebsite live: [TONELY](https://jacqueline-1929.github.io/mandarin_tone_trainer/)
+> website live: [TONELY](https://jacqueline-1929.github.io/mandarin_tone_trainer/)
 
 By **Jackie Carter** and **Sam Knox**.
 Code released under the MIT License — see [LICENSE](LICENSE). Audio and embedded media remain under the licenses of their original sources (see Acknowledgments).
