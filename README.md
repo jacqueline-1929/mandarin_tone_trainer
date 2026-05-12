@@ -1,8 +1,9 @@
 # Tonely
 
 > Tone training for ears that grew up without tones.
+> wwebsite live: [TONELY](https://jacqueline-1929.github.io/mandarin_tone_trainer/)
 
-By **Jackie Carter**.
+By **Jackie Carter** and **Sam Knox**.
 Code released under the MIT License — see [LICENSE](LICENSE). Audio and embedded media remain under the licenses of their original sources (see Acknowledgments).
 
 A single-page flashcard app for training Mandarin tone perception. Each card pairs a high-frequency monosyllabic word with a tone-minimal-pair contrast (same syllable, different tone) so you train the perceptual category — not just the word.
